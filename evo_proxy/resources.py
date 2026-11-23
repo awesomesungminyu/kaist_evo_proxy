@@ -1,7 +1,6 @@
 """External training-process measurements (Linux, one process tree at a time)."""
 import os
 from pathlib import Path
-import re
 import subprocess
 import time
 
@@ -52,14 +51,15 @@ def linux_owns_gpu(pids):
 
 
 def measure(command, *, cwd, env, out, gpu):
-    timing=out/'cpu_time.txt'
-    external_time=Path('/usr/bin/time').is_file()
-    launch=['/usr/bin/time','-o',str(timing),'-f','%U %S %M',*command] if external_time else command
-    started=time.monotonic()
+    started = time.monotonic()
     peak, usage = None, []
     with (out/'process.log').open('w') as log:
-        process=subprocess.Popen(launch,cwd=cwd,env=env,stdout=log,stderr=subprocess.STDOUT)
-        while process.poll() is None:
+        process = subprocess.Popen(command,cwd=cwd,env=env,stdout=log,stderr=subprocess.STDOUT)
+        while True:
+            child, status, rusage = os.wait4(process.pid, os.WNOHANG)
+            if child:
+                process.returncode = os.waitstatus_to_exitcode(status)
+                break
             if gpu:
                 try:
                     rows=query('compute-apps','gpu_uuid,pid,used_gpu_memory')
@@ -74,17 +74,8 @@ def measure(command, *, cwd, env, out, gpu):
                         usage.extend(int(u) for dev,u in query('gpu','uuid,utilization.gpu') if dev in active and u.isdigit())
                 except (subprocess.SubprocessError,OSError,ValueError):
                     pass
-            try:
-                process.wait(timeout=1 if gpu else .25)
-            except subprocess.TimeoutExpired:
-                pass
-    elapsed = time.monotonic()-started
-    cpu,rss=None,None
-    if timing.is_file():
-        for line in timing.read_text().splitlines():
-            if re.fullmatch(r'[0-9.]+ [0-9.]+ [0-9]+',line):
-                user,system,peak_rss=map(float,line.split())
-                cpu,rss=user+system,peak_rss/1024
+            time.sleep(1 if gpu else .10)
+    elapsed = time.monotonic() - started
     return dict(exit_code=process.returncode,wall_seconds=elapsed,gpu_time_min=elapsed/60 if gpu else None,
                 peak_vram_mib=peak,gpu_util_pct=sum(usage)/len(usage) if usage else None,
-                cpu_time_s=cpu,peak_rss_mib=rss)
+                cpu_time_s=rusage.ru_utime+rusage.ru_stime,peak_rss_mib=rusage.ru_maxrss/1024)
