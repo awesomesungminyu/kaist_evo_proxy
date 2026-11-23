@@ -6,6 +6,16 @@ Transformer 대안 mixer를 가벼운 18개 과제로 평가합니다. 후보를
 
 ## 빠른 시작
 
+### 자동으로 되는 것
+
+| 명령 | 하는 일 |
+|---|---|
+| `evo-proxy setup` | 지정된 평가기와 의존성을 설치합니다. |
+| `evo-proxy data --download` | 필요한 Drive 묶음을 받고 SHA-256을 검사한 뒤 데이터를 준비합니다. |
+| `evo-proxy install-skills` | EvoScientist 작업 폴더에 skill을 복사합니다. |
+| `evo-proxy eval` | 후보를 검사하고 평가 결과와 피드백을 씁니다. |
+| `evo-proxy doctor` | 설치, 데이터, EvoScientist와 skill 준비 상태를 확인합니다. |
+
 ### 직접 준비할 것
 
 1. Linux와 Python 3.11을 준비합니다. CUDA GPU는 full 평가에 필요합니다. CPU smoke는 setup 전에 `export EVO_PROXY_CPU=1`을 실행합니다.
@@ -27,7 +37,7 @@ evo-proxy setup
 evo-proxy data --download
 evo-proxy doctor --core
 evo-proxy eval examples/candidate_mixer.py --profile smoke --out runs/example
-evo-proxy baseline transformer --profile smoke --out runs/transformer
+evo-proxy baseline transformer --profile smoke --out runs/baseline
 pip install EvoScientist==0.4.1
 export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"
 evo-proxy install-skills
@@ -51,7 +61,7 @@ evo-proxy data --download --tasks T1-R1-05 T2-R4-02
 evo-proxy data --source incoming
 ```
 
-기본 다운로드는 9개 묶음, 881,766,137바이트입니다. Speech의 원본 WAV 묶음은 선택이며, 기본 경로는 평가 캐시를 사용합니다. 이전 extras와 겹치는 자료는 11/23 묶음을 사용합니다.
+기본 다운로드는 9개 묶음, 881,766,137바이트입니다. 신규 Linux 검증에서 다운로드·검증·압축 해제·준비를 합쳐 58초가 걸렸습니다. Speech의 원본 WAV 묶음은 선택이며, 기본 경로는 평가 캐시를 사용합니다. 이전 extras와 겹치는 자료는 11/23 묶음을 사용합니다.
 
 | Tier | ID | 과제 | 데이터 | 기본 묶음 | 준비 후 파일 |
 |---|---|---|---|---|---|

@@ -6,6 +6,16 @@ Evaluate Transformer alternatives on 18 small proxy tasks. Check a mixer on CPU,
 
 ## Quickstart
 
+### What runs automatically
+
+| Command | What it does |
+|---|---|
+| `evo-proxy setup` | Installs the pinned evaluator and its dependencies. |
+| `evo-proxy data --download` | Downloads and checks the required Drive archives, then prepares the data. |
+| `evo-proxy install-skills` | Copies skills into the EvoScientist workspace. |
+| `evo-proxy eval` | Checks and evaluates the candidate and writes feedback. |
+| `evo-proxy doctor` | Checks evaluator, data, EvoScientist and skill readiness. |
+
 ### What you provide
 
 1. Use Linux and Python 3.11. Full evaluation requires a CUDA GPU. For CPU smoke, run `export EVO_PROXY_CPU=1` before setup.
@@ -27,7 +37,7 @@ For manual setup, extract the data archives from the [Drive checklist](drive_upl
 evo-proxy data --download
 evo-proxy doctor --core
 evo-proxy eval examples/candidate_mixer.py --profile smoke --out runs/example
-evo-proxy baseline transformer --profile smoke --out runs/transformer
+evo-proxy baseline transformer --profile smoke --out runs/baseline
 pip install EvoScientist==0.4.1
 export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"
 evo-proxy install-skills
@@ -51,7 +61,7 @@ evo-proxy data --download --tasks T1-R1-05 T2-R4-02
 evo-proxy data --source incoming
 ```
 
-The default archives total 881,766,137 bytes across nine files. The original Speech WAV archive is optional. The default path uses the evaluated cache. The November 23 archives take precedence over overlapping October extras.
+The default archives total 881,766,137 bytes across nine files. The Linux verification took 58 seconds for downloading, checking, extracting, and preparing the data. The original Speech WAV archive is optional. The default path uses the evaluated cache. The November 23 archives take precedence over overlapping October extras.
 
 | Tier | ID | Task | Data | Default archive | Prepared files |
 |---|---|---|---|---|---|
