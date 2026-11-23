@@ -159,11 +159,13 @@ def evaluate(candidate, profile, out, only=None):
                 gate_passed=gate,stop_reason=stop,
                 tasks=[rows.get(t['id'],dict(task=t['id'],tier=t['tier'],name=t['name'],
                                              mean=None,status='not_run')) for t in tasks])
+    if not ok:
+        report['precheck_feedback'] = format_precheck(check,extra)
     judged=judge(report,config['tasks'])
     h.save(target/'report.json',report)
     h.save(target/'judged.json',judged)
     h.save(target/'resources.json',costs)
-    (target/'feedback.md').write_text(make_feedback(report,judged,costs,precheck=format_precheck(check,extra) if not ok else None),encoding='utf-8')
+    (target/'feedback.md').write_text(make_feedback(report,judged,costs,precheck=report.get('precheck_feedback')),encoding='utf-8')
     print(f'Output: {target}')
     return int(stop not in ('completed','tier1_two_below_threshold'))
 
