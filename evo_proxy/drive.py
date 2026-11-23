@@ -38,11 +38,16 @@ def fetch(destination, selectors):
         if not target.is_file():
             with tempfile.TemporaryDirectory(dir=destination) as staging:
                 path = Path(staging) / name
-                try:
-                    result = gdown.download(id=item['id'], output=str(path), resume=False)
-                except (gdown.exceptions.FileURLRetrievalError, RequestException) as error:
-                    raise ValueError(f'{name}: Drive unavailable. Download manually from {manifest["folder"]}') from error
-                if result is None:
+                for retry in range(2):
+                    try:
+                        result = gdown.download(id=item['id'], output=str(path), resume=False)
+                    except (gdown.exceptions.FileURLRetrievalError, RequestException):
+                        result = None
+                    if result is not None:
+                        break
+                    if retry == 0:
+                        print(f'{name}: retrying the Drive request once', flush=True)
+                else:
                     raise ValueError(f'{name}: Drive unavailable. Download manually from {manifest["folder"]}')
                 verify(path, item)
                 path.replace(target)

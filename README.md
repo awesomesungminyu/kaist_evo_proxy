@@ -5,8 +5,14 @@
 Transformer 대안 mixer를 가벼운 18개 과제로 평가합니다. 후보를 CPU에서 검사하고, 두 티어의 유지율과 자원을 기록하며, EvoScientist가 읽을 피드백을 만듭니다.
 
 ## 빠른 시작
-Linux와 Python 3.11이 필요합니다. CPU smoke만 할 경우 setup 전에 `export EVO_PROXY_CPU=1`을 실행합니다.
 
+### 직접 준비할 것
+
+1. Linux와 Python 3.11을 준비합니다. CUDA GPU는 full 평가에 필요합니다. CPU smoke는 setup 전에 `export EVO_PROXY_CPU=1`을 실행합니다.
+2. 로컬 `.env`에 `CUSTOM_OPENAI_API_KEY`와 `CUSTOM_OPENAI_BASE_URL`을 설정합니다.
+3. 에이전트 명령의 `YOUR_MODEL`을 제공자의 모델 ID로 바꿉니다.
+
+### 명령 순서
 
 ```bash
 python3.11 -m venv .venv
@@ -37,13 +43,36 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
 
 ### 데이터 선택 및 수동 준비
 
-[​Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
+[Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
 
 ```bash
 evo-proxy data --download --tasks tier1 --dest incoming
 evo-proxy data --download --tasks T1-R1-05 T2-R4-02
 evo-proxy data --source incoming
 ```
+
+기본 다운로드는 9개 묶음, 881,766,137바이트입니다. Speech의 원본 WAV 묶음은 선택이며, 기본 경로는 평가 캐시를 사용합니다. 이전 extras와 겹치는 자료는 11/23 묶음을 사용합니다.
+
+| Tier | ID | 과제 | 데이터 | 기본 묶음 | 준비 후 파일 |
+|---|---|---|---|---|---|
+| 1 | T1-R1-05 | MAD Compression | 파일 | proxy-data-final-pool-mad.tar.gz | inputs.npy |
+| 1 | T1-R0-07 | RegBench | 생성형 | — | — |
+| 1 | T1-R2-02 | String Matching | 생성형 | — | — |
+| 1 | T1-R2-01 | Positional Histogram | 생성형 | — | — |
+| 1 | T1-R2-05 | Random Automaton | 생성형 | — | — |
+| 1 | T1-R2-04 | Cycle Navigation | 생성형 | — | — |
+| 1 | T1-R0-04 | Parity | 파일 | proxy-data-final-pool-parity.tar.gz | train_corpus.pk, val_corpus_bins.pk |
+| 1 | T1-R0-05 | Tomita 5 | 파일 | proxy-data-tomita5.tar.gz | train_corpus.pk, val_corpus_bins.pk |
+| 2 | T2-R1-11 | Permuted MNIST | 파일 | proxy-data-final-pool-small.tar.gz | train-images-idx3-ubyte.gz, train-labels-idx1-ubyte.gz |
+| 2 | T2-R3-05 | Permuted Kuzushiji-49 | 파일 | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy |
+| 2 | T2-R4-02 | Speech Commands (raw waveform) | 파일 | proxy-data-speech-cache.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
+| 2 | T2-R3-02 | Permuted EMNIST (letters) | 파일 | proxy-data-emnist.tar.gz | train_x.npy, train_y.npy |
+| 2 | T2-R1-04 | TAPE Stability | 파일 | proxy-data-final-pool-small.tar.gz | train.csv, valid.csv |
+| 2 | T2-R1-09 | enwik8 | 파일 | proxy-data-final-pool-small.tar.gz | enwik8.zip |
+| 2 | T2-R1-08 | IMDB (byte-level) | 파일 | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
+| 2 | T2-R2-02 | Lipophilicity (SMILES) | 파일 | proxy-data-final-pool-small.tar.gz, proxy-data-lipophilicity.tar.gz | Lipophilicity.csv, split.npz |
+| 2 | promoters | Human non-TATA promoter classification | 파일 | proxy-data-promoters.tar.gz | arrays.npz |
+| 2 | bach | DCMLab Bach chorales | 파일 | proxy-data-bach.tar.gz | arrays.npz |
 
 ## EvoScientist 루프
 

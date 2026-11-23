@@ -5,8 +5,14 @@
 Evaluate Transformer alternatives on 18 small proxy tasks. Check a mixer on CPU, record retention and costs by tier, and return feedback to EvoScientist.
 
 ## Quickstart
-Use Linux and Python 3.11. For CPU-only smoke, run `export EVO_PROXY_CPU=1` before setup.
 
+### What you provide
+
+1. Use Linux and Python 3.11. Full evaluation requires a CUDA GPU. For CPU smoke, run `export EVO_PROXY_CPU=1` before setup.
+2. Set `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` in your local `.env`.
+3. Replace `YOUR_MODEL` in the agent command with the provider's model ID.
+
+### Command sequence
 
 ```bash
 python3.11 -m venv .venv
@@ -37,13 +43,36 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
 
 ### Data selection and manual setup
 
-[​Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
+[Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
 
 ```bash
 evo-proxy data --download --tasks tier1 --dest incoming
 evo-proxy data --download --tasks T1-R1-05 T2-R4-02
 evo-proxy data --source incoming
 ```
+
+The default archives total 881,766,137 bytes across nine files. The original Speech WAV archive is optional. The default path uses the evaluated cache. The November 23 archives take precedence over overlapping October extras.
+
+| Tier | ID | Task | Data | Default archive | Prepared files |
+|---|---|---|---|---|---|
+| 1 | T1-R1-05 | MAD Compression | File | proxy-data-final-pool-mad.tar.gz | inputs.npy |
+| 1 | T1-R0-07 | RegBench | Generated | — | — |
+| 1 | T1-R2-02 | String Matching | Generated | — | — |
+| 1 | T1-R2-01 | Positional Histogram | Generated | — | — |
+| 1 | T1-R2-05 | Random Automaton | Generated | — | — |
+| 1 | T1-R2-04 | Cycle Navigation | Generated | — | — |
+| 1 | T1-R0-04 | Parity | File | proxy-data-final-pool-parity.tar.gz | train_corpus.pk, val_corpus_bins.pk |
+| 1 | T1-R0-05 | Tomita 5 | File | proxy-data-tomita5.tar.gz | train_corpus.pk, val_corpus_bins.pk |
+| 2 | T2-R1-11 | Permuted MNIST | File | proxy-data-final-pool-small.tar.gz | train-images-idx3-ubyte.gz, train-labels-idx1-ubyte.gz |
+| 2 | T2-R3-05 | Permuted Kuzushiji-49 | File | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy |
+| 2 | T2-R4-02 | Speech Commands (raw waveform) | File | proxy-data-speech-cache.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
+| 2 | T2-R3-02 | Permuted EMNIST (letters) | File | proxy-data-emnist.tar.gz | train_x.npy, train_y.npy |
+| 2 | T2-R1-04 | TAPE Stability | File | proxy-data-final-pool-small.tar.gz | train.csv, valid.csv |
+| 2 | T2-R1-09 | enwik8 | File | proxy-data-final-pool-small.tar.gz | enwik8.zip |
+| 2 | T2-R1-08 | IMDB (byte-level) | File | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
+| 2 | T2-R2-02 | Lipophilicity (SMILES) | File | proxy-data-final-pool-small.tar.gz, proxy-data-lipophilicity.tar.gz | Lipophilicity.csv, split.npz |
+| 2 | promoters | Human non-TATA promoter classification | File | proxy-data-promoters.tar.gz | arrays.npz |
+| 2 | bach | DCMLab Bach chorales | File | proxy-data-bach.tar.gz | arrays.npz |
 
 ## EvoScientist loop
 
