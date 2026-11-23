@@ -22,9 +22,14 @@ def consume_budget(path,cap):
     with (path.parent/(path.name+'.lock')).open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         state=json.loads(path.read_text()) if path.exists() else dict(calls=0)
-        if state['calls']>=cap:raise ValueError('Local LLM call cap exhausted')
-        state['calls']+=1
+        exhausted=state['calls']>=cap
+        if exhausted:
+            state['rejected']=state.get('rejected',0)+1
+        else:
+            state['calls']+=1
         temporary=path.with_suffix('.tmp');temporary.write_text(json.dumps(state));temporary.replace(path)
+        if exhausted:
+            raise ValueError('Local LLM call cap exhausted')
         return state['calls']
 
 

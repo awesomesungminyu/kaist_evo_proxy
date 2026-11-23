@@ -8,6 +8,8 @@ import subprocess
 import sys
 
 from . import harness as h
+from .attempts import attempt
+from .precheck import format_precheck
 from .feedback import make_feedback
 from .judge import REFERENCE, compare, judge
 from .resources import measure, wait_idle
@@ -124,13 +126,28 @@ def run_tasks(candidate, profile, out, tasks, checks):
     return rows,costs,gate,stop
 
 
-def evaluate(candidate,profile,out):
-    if not candidate.is_file():
-        raise ValueError(f'Candidate file missing: {candidate}')
+def checked(candidate, target, command, gpu=False):
+    with attempt(candidate,target,command) as (record, blocked):
+        if blocked:
+            result = False, dict(status='failed',error=blocked), {}
+        elif gpu:
+            with h.serial_gpu(True):
+                wait_idle()
+                result = h.precheck(candidate,target,gpu=True)
+        else:
+            result = h.precheck(candidate,target)
+        if record is not None:
+            record['status'] = 'passed' if result[0] else 'blocked' if blocked else 'failed'
+    return result
+
+
+def evaluate(candidate, profile, out, only=None):
     target = h.new_output(out)
-    ok,check,extra = h.precheck(candidate,target)
+    ok,check,extra = checked(candidate,target,'eval')
     config=h.read(h.ROOT/'tasks/tasks.json')
     tasks=ordered_tasks(profile,config)
+    if only is not None:
+        tasks=[task for task in tasks if task['id']==only]
     if ok:
         with h.serial_gpu(profile!='smoke'):
             rows,costs,gate,stop=run_tasks(candidate,profile,target,tasks,check['tasks']|extra)
@@ -146,7 +163,7 @@ def evaluate(candidate,profile,out):
     h.save(target/'report.json',report)
     h.save(target/'judged.json',judged)
     h.save(target/'resources.json',costs)
-    (target/'feedback.md').write_text(make_feedback(report,judged,costs),encoding='utf-8')
+    (target/'feedback.md').write_text(make_feedback(report,judged,costs,precheck=format_precheck(check,extra) if not ok else None),encoding='utf-8')
     print(f'Output: {target}')
     return int(stop not in ('completed','tier1_two_below_threshold'))
 
@@ -164,12 +181,15 @@ def main(argv=None):
     check=actions.add_parser('check',help='Check one candidate on CPU without training')
     check.add_argument('mixer',type=Path)
     check.add_argument('--out',type=Path,default=Path('runs/precheck'))
+    check.add_argument('--gpu-benchmark',action='store_true',help='Also probe maximum-length GPU memory on the official tasks')
     ev=actions.add_parser('eval',help='Evaluate a candidate and create reports and feedback')
     ev.add_argument('mixer',type=Path)
     base=actions.add_parser('baseline',help='Run a named reference mixer')
     names=sorted(p.stem for p in (h.ROOT/'baselines/mixers').glob('*.py'))
     base.add_argument('name',choices=names)
+    task_ids=[t['id'] for t in h.read(h.ROOT/'tasks/tasks.json')['tasks']]
     for cmd in (ev,base):
+        cmd.add_argument('--task',choices=task_ids,help='Select one task in smoke mode')
         cmd.add_argument('--profile',choices=PROFILES,default='smoke')
         cmd.add_argument('--out',type=Path,default=Path('runs/evaluation'))
     args=parser.parse_args(argv)
@@ -188,11 +208,16 @@ def main(argv=None):
             return h.prepare(args.source.resolve())
         if args.command=='check':
             target=h.new_output(args.out)
-            ok,_,_=h.precheck(args.mixer.resolve(),target)
-            print(f'Precheck: {"passed" if ok else "failed"} ({target})')
+            ok,check,extra=checked(args.mixer.resolve(),target,'check',args.gpu_benchmark)
+            feedback = format_precheck(check,extra)
+            (target/'feedback.md').write_text(feedback,encoding='utf-8')
+            print(f'Precheck: {"passed" if ok else "failed"} ({target / "feedback.md"})')
+            print(feedback)
             return int(not ok)
         candidate = args.mixer.resolve() if args.command=='eval' else h.ROOT/'baselines/mixers'/f'{args.name}.py'
-        return evaluate(candidate,args.profile,args.out)
+        if args.task and args.profile!='smoke':
+            parser.error('--task requires --profile smoke')
+        return evaluate(candidate,args.profile,args.out,args.task)
     except (OSError,ValueError,subprocess.SubprocessError) as error:
         parser.exit(1,f'evo-proxy: {error}\n')
 

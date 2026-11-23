@@ -117,13 +117,31 @@ def new_output(path):
         return Path(tempfile.mkdtemp(prefix='run-',dir=path))
 
 
-def precheck(candidate, out):
+def precheck(candidate, out, gpu=False):
     ref = f'{candidate}:CandidateMixer'
     output = out/'precheck.json'
-    official = run('validation','precheck','--mixer',ref,'--data-root',DATA,'--out',output,device='cpu')
     extension = out/'precheck_extra.json'
-    extra = run('release_tasks','check','--mixer',ref,'--out',extension,device='cpu')
-    return official.returncode == extra.returncode == 0, read(output), read(extension)
+    args = ['validation','precheck','--mixer',ref,'--data-root',DATA,'--out',output]
+    if gpu:
+        args.append('--gpu-benchmark')
+    with (out/'precheck_official.log').open('w') as log:
+        official = run(*args,device=None if gpu else 'cpu',stdout=log,stderr=subprocess.STDOUT)
+    with (out/'precheck_extension.log').open('w') as log:
+        extra = run('release_tasks','check','--mixer',ref,'--out',extension,
+                    device='cpu',stdout=log,stderr=subprocess.STDOUT)
+    check = read(output) if output.is_file() else dict(status='failed',error='See precheck_official.log')
+    extras = read(extension) if extension.is_file() else {}
+    if output.is_file() and extension.is_file() and any(not ok for row in (check.get('tasks', {})|extras).values()
+           for name, ok in row.get('checks', {}).items()
+           if name not in ('parameter_budget','gpu_max_length_finite')):
+        path = out/'precheck_diagnostics.json'
+        with (out/'precheck_diagnostics.log').open('w') as log:
+            run('evo_proxy.precheck',ref,output,extension,path,
+                device='cpu',stdout=log,stderr=subprocess.STDOUT)
+        if path.is_file():
+            for task, details in read(path).items():
+                (check.get('tasks', {})|extras)[task]['diagnostics'] = details
+    return official.returncode == extra.returncode == 0, check, extras
 
 
 @contextmanager

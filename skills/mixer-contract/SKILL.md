@@ -13,3 +13,13 @@ The parameter tolerance is ±10% of the **Transformer block**, including
 identical normalization and MLP. Use `evo-proxy check candidate.py` to
 verify each configured shape. Leave data, optimizer, training steps and
 seeds as defined by the harness.
+
+| Configuration | Transformer params per block | Allowed per block (inclusive) |
+|---|---:|---:|
+| Default, d128 / 2 layers / 4 heads | 194,816 | 175,335–214,297 |
+| RegBench, d128 / 8 layers / 2 heads | 194,816 | 175,335–214,297 |
+| Parity and Tomita 5, d32 / 2 layers / 4 heads | 11,840 | 10,656–13,024 |
+
+First write the file, then run `evo-proxy check candidate.py --out runs/check`.
+Read the generated feedback.md on failure before trying a new revision.
+Run `evo-proxy eval` only after a passing check.

@@ -1,10 +1,12 @@
 """Render measured outcomes for an agent without prescribing candidate changes."""
-def make_feedback(report, judged, resources):
+def make_feedback(report, judged, resources, precheck=None):
     def value(value):
         return 'unavailable' if value is None else f'{value:.5g}' if isinstance(value,float) else str(value)
     lines=['# Candidate feedback','','Profile: '+report['profile'],
            'Comparable performance: '+value(report['performance_comparable']),
            'Stop reason: '+value(judged['stop_reason']), 'Gate passed: '+value(judged['gate_passed']),'']
+    if precheck is not None:
+        return '\n'.join(lines)+'\n'+precheck+'\n'
     for tier in ('tier1','tier2'):
         row=judged[tier]
         lines.append(f"- {tier}: strict={row['strict']}; relaxed={row['relaxed']}; "
