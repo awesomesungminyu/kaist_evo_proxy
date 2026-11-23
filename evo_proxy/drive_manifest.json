@@ -1,0 +1,110 @@
+{
+  "folder": "https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing",
+  "archives": [
+    {
+      "name": "proxy-data-final-pool-small.tar.gz",
+      "id": "1jGNy_C5gE-5KyB-k49kB-Om0UhoNHgbr",
+      "size": 152684158,
+      "sha256": "3471f14f4438bc4aee92557bab7e006edfbfe6573294ed930b143b09152d3e09",
+      "tasks": [
+        "T2-R1-11",
+        "T2-R3-05",
+        "T2-R1-04",
+        "T2-R1-09",
+        "T2-R1-08",
+        "T2-R2-02"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-final-pool-mad.tar.gz",
+      "id": "1CmoeXSpYqUm3OLv2czjaxGICVZClwAbA",
+      "size": 327195,
+      "sha256": "bbb6ade421d87e8373b81c4d885e6cbde53a332e6f76dbfc780b4dddab853503",
+      "tasks": [
+        "T1-R1-05"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-final-pool-parity.tar.gz",
+      "id": "1Ti7OMIoy0wqYriMlGRJT8ZgMYp3PsEfV",
+      "size": 279977,
+      "sha256": "c333fecc00d8938b5ab2275eb5ce781eeec7b910a3e1bff89375eb5ad4fe3fb8",
+      "tasks": [
+        "T1-R0-04"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-final-pool-speech_commands.tar.gz",
+      "id": "1apenZDzF1SgaHrpc_Lt3ytPfZSz4TfQO",
+      "size": 2427893343,
+      "sha256": "c77a5d5f7a3ffb8442abda5da0b461410f4900d6c50f3aa5a1a1ee36d2f01a61",
+      "tasks": [
+        "T2-R4-02"
+      ],
+      "optional": true
+    },
+    {
+      "name": "proxy-data-speech-cache.tar.gz",
+      "id": "1USeL2Eu_A7_vyIaxNnK9pwNv5dS-rJOS",
+      "size": 693340132,
+      "sha256": "00af438336bae43b4e6145711cd5408876c47c63946aaf8f41d6208aa414664c",
+      "tasks": [
+        "T2-R4-02"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-tomita5.tar.gz",
+      "id": "1XNmAsb-c8csrIgPhL0wPPRIhHv4fbcvJ",
+      "size": 287766,
+      "sha256": "af40131e417d004bbae40fab0c88788ef60b459ed6366422d30d63398a290a41",
+      "tasks": [
+        "T1-R0-05"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-emnist.tar.gz",
+      "id": "1b7eEwpu0PXT9t5gDNhXRPBGbVQQUrev5",
+      "size": 32111870,
+      "sha256": "61e0969a195e48f970aa8e951eeee62714e5c9e6693d078876fa72201542e4cf",
+      "tasks": [
+        "T2-R3-02"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-lipophilicity.tar.gz",
+      "id": "1c3HF3fydbINiKinTeeM-zvMiuZ4p7Yv6",
+      "size": 6952,
+      "sha256": "c6eac263c8a50b3090c87d64c0c4a774d3b9c3d5cc3e1f657fd3b678a2862e7b",
+      "tasks": [
+        "T2-R2-02"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-promoters.tar.gz",
+      "id": "1HGEnjsNlSXUQ46v0JKEVEQUBgZCI3jYi",
+      "size": 2567887,
+      "sha256": "72245e300b5fc124e10b31c365766cc9ad0a7d16ef9690dc764fe0dd473ba42e",
+      "tasks": [
+        "promoters"
+      ],
+      "optional": false
+    },
+    {
+      "name": "proxy-data-bach.tar.gz",
+      "id": "17nPZwLXuAv3b3czAFovUDZsz5e6KfOBC",
+      "size": 160200,
+      "sha256": "984d96459d66b55a85116bdbb4276371dfae773d7e0f30bd0543ecd8407530c2",
+      "tasks": [
+        "bach"
+      ],
+      "optional": false
+    }
+  ]
+}

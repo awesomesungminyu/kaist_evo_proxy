@@ -15,10 +15,10 @@ pip install -e .
 evo-proxy setup
 ```
 
-Extract the data archives from the [Drive checklist](drive_upload_20261123/README.md) into one `incoming/` folder.
+For manual setup, extract the data archives from the [Drive checklist](drive_upload_20261123/README.md) into one `incoming/` folder.
 
 ```bash
-evo-proxy data --source incoming
+evo-proxy data --download
 evo-proxy doctor --core
 evo-proxy eval examples/candidate_mixer.py --profile smoke --out runs/example
 evo-proxy baseline transformer --profile smoke --out runs/transformer
@@ -33,6 +33,16 @@ Put `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` in a local `.env` and r
 ```bash
 python integrations/evoscientist/run_agent.py --workspace .evo-work \
   --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
+```
+
+### Data selection and manual setup
+
+[​Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
+
+```bash
+evo-proxy data --download --tasks tier1 --dest incoming
+evo-proxy data --download --tasks T1-R1-05 T2-R4-02
+evo-proxy data --source incoming
 ```
 
 ## EvoScientist loop

@@ -15,10 +15,10 @@ pip install -e .
 evo-proxy setup
 ```
 
-[Drive 목록](drive_upload_20261123/README.md)의 데이터 묶음을 같은 `incoming/` 폴더에 풉니다.
+[Drive 목록](drive_upload_20261123/README.md)의 데이터 묶음을 같은 `incoming/` 폴더에 풀고 수동 경로를 사용할 수도 있습니다.
 
 ```bash
-evo-proxy data --source incoming
+evo-proxy data --download
 evo-proxy doctor --core
 evo-proxy eval examples/candidate_mixer.py --profile smoke --out runs/example
 evo-proxy baseline transformer --profile smoke --out runs/transformer
@@ -33,6 +33,16 @@ evo-proxy doctor
 ```bash
 python integrations/evoscientist/run_agent.py --workspace .evo-work \
   --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
+```
+
+### 데이터 선택 및 수동 준비
+
+[​Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
+
+```bash
+evo-proxy data --download --tasks tier1 --dest incoming
+evo-proxy data --download --tasks T1-R1-05 T2-R4-02
+evo-proxy data --source incoming
 ```
 
 ## EvoScientist 루프

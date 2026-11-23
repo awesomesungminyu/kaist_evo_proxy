@@ -175,7 +175,11 @@ def main(argv=None):
     actions=parser.add_subparsers(dest='command',required=True)
     actions.add_parser('setup',help='Install the pinned evaluator and dependencies')
     data=actions.add_parser('data',help='Prepare extracted Drive bundles and check readiness')
-    data.add_argument('--source',type=Path,required=True)
+    sources = data.add_mutually_exclusive_group(required=True)
+    sources.add_argument('--source', type=Path)
+    sources.add_argument('--download', action='store_true')
+    data.add_argument('--tasks', nargs='+', default=['all'])
+    data.add_argument('--dest', type=Path, default=Path('incoming'))
     diagnose=actions.add_parser('doctor',help='Check Torch, CUDA, datasets, EvoScientist and installed skills')
     diagnose.add_argument('--core',action='store_true',help='Only require evaluator readiness')
     skills=actions.add_parser('install-skills',help='Copy skills to <EvoScientist workspace>/skills')
@@ -207,7 +211,13 @@ def main(argv=None):
         if args.command=='doctor':
             return doctor(args.core)
         if args.command=='data':
-            return h.prepare(args.source.resolve())
+            if not args.download:
+                if args.tasks != ['all'] or args.dest != Path('incoming'):
+                    parser.error('--tasks and --dest require --download')
+                return h.prepare(args.source.resolve())
+            from .drive import fetch
+            destination = args.dest.resolve()
+            return h.prepare(destination, fetch(destination, args.tasks))
         if args.command=='check':
             target=h.new_output(args.out)
             ok,check,extra=checked(args.mixer.resolve(),target,'check',args.gpu_benchmark)

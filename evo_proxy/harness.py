@@ -92,7 +92,18 @@ def data_ready():
     return results
 
 
-def prepare(source):
+def prepare(source, selected=None):
+    if selected is not None:
+        tasks = read(ROOT/'tasks/tasks.json')['tasks']
+        extensions = {task['id'] for task in tasks if task['id'] in ('promoters', 'bach')}
+        results = [run('validation', 'prepare', '--source', source, '--data-root', DATA,
+                       '--task', task).returncode for task in sorted(selected - extensions)]
+        if selected & extensions:
+            # The extension command checks both tasks, so inspect selected readiness below.
+            run('release_tasks', 'data', '--source', source, '--data-root', DATA)
+        ready = [row for row in data_ready() if row['task'] in selected]
+        print(json.dumps(ready, ensure_ascii=False, indent=2))
+        return int(any(results) or len(ready) != len(selected) or not all(row['ready'] for row in ready))
     results = [
         run('validation','prepare','--source',source,'--data-root',DATA).returncode,
         run('release_tasks','data','--source',source,'--data-root',DATA).returncode,
