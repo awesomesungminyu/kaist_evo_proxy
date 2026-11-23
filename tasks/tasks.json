@@ -1,0 +1,328 @@
+{
+  "tasks": [
+    {
+      "id": "T1-R1-05",
+      "name": "MAD Compression",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "token_accuracy",
+      "group": "memory-retrieval",
+      "type": "classification",
+      "data": "file",
+      "input": "tokens",
+      "model": {
+        "l_max": 32,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 128
+      }
+    },
+    {
+      "id": "T1-R0-07",
+      "name": "RegBench",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "next_token_acc",
+      "group": "rule-learning",
+      "type": "next-step",
+      "data": "generated",
+      "input": "tokens",
+      "model": {
+        "l_max": 256,
+        "d_model": 128,
+        "n_layers": 8,
+        "num_heads": 2,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T1-R2-02",
+      "name": "String Matching",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "memory-retrieval",
+      "type": "classification",
+      "data": "generated",
+      "input": "tokens",
+      "model": {
+        "l_max": 129,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T1-R2-01",
+      "name": "Positional Histogram",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "slot_accuracy",
+      "group": "counting",
+      "type": "classification",
+      "data": "generated",
+      "input": "tokens",
+      "model": {
+        "l_max": 129,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T1-R2-05",
+      "name": "Random Automaton",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "last_state_accuracy_id50_ex50",
+      "group": "state-tracking",
+      "type": "classification",
+      "data": "generated",
+      "input": "tokens",
+      "model": {
+        "l_max": 96,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T1-R2-04",
+      "name": "Cycle Navigation",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "accuracy_id50_ex50",
+      "group": "state-tracking",
+      "type": "classification",
+      "data": "generated",
+      "input": "tokens",
+      "model": {
+        "l_max": 101,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T1-R0-04",
+      "name": "Parity",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "mean_best_val_accuracy",
+      "group": "state-tracking",
+      "type": "classification",
+      "data": "file",
+      "input": "tokens",
+      "model": {
+        "l_max": 128,
+        "d_model": 32,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 32
+      }
+    },
+    {
+      "id": "T1-R0-05",
+      "name": "Tomita 5",
+      "tier": 1,
+      "direction": "maximize",
+      "metric": "mean_best_val_accuracy",
+      "group": "state-tracking",
+      "type": "classification",
+      "data": "file",
+      "input": "tokens",
+      "model": {
+        "l_max": 128,
+        "d_model": 32,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 32
+      }
+    },
+    {
+      "id": "T2-R1-11",
+      "name": "Permuted MNIST",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "continuous-signal",
+      "type": "classification",
+      "data": "file",
+      "input": "continuous sequence",
+      "model": {
+        "l_max": 784,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T2-R3-05",
+      "name": "Permuted Kuzushiji-49",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "continuous-signal",
+      "type": "classification",
+      "data": "file",
+      "input": "continuous sequence",
+      "model": {
+        "l_max": 784,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T2-R4-02",
+      "name": "Speech Commands (raw waveform)",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "continuous-signal",
+      "type": "classification",
+      "data": "file",
+      "input": "continuous sequence",
+      "model": {
+        "l_max": 2000,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 32
+      }
+    },
+    {
+      "id": "T2-R3-02",
+      "name": "Permuted EMNIST (letters)",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "continuous-signal",
+      "type": "classification",
+      "data": "file",
+      "input": "continuous sequence",
+      "model": {
+        "l_max": 784,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T2-R1-04",
+      "name": "TAPE Stability",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "spearman_valid",
+      "group": "biological-chemical",
+      "type": "regression",
+      "data": "file",
+      "input": "amino acid tokens",
+      "model": {
+        "l_max": 64,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 128
+      }
+    },
+    {
+      "id": "T2-R1-09",
+      "name": "enwik8",
+      "tier": 2,
+      "direction": "minimize",
+      "metric": "val_bpc",
+      "group": "language-text",
+      "type": "next-step",
+      "data": "file",
+      "input": "bytes",
+      "model": {
+        "l_max": 256,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "T2-R1-08",
+      "name": "IMDB (byte-level)",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "language-text",
+      "type": "classification",
+      "data": "file",
+      "input": "bytes",
+      "model": {
+        "l_max": 2048,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 16
+      }
+    },
+    {
+      "id": "T2-R2-02",
+      "name": "Lipophilicity (SMILES)",
+      "tier": 2,
+      "direction": "minimize",
+      "metric": "rmse_valid",
+      "group": "biological-chemical",
+      "type": "regression",
+      "data": "file",
+      "input": "SMILES tokens",
+      "model": {
+        "l_max": 267,
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "promoters",
+      "name": "Human non-TATA promoter classification",
+      "tier": 2,
+      "direction": "maximize",
+      "metric": "accuracy",
+      "group": "biological-chemical",
+      "type": "classification",
+      "data": "file",
+      "input": "ACGTN IDs, 0 padding",
+      "model": {
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "l_max": 251,
+        "batch_size": 64
+      }
+    },
+    {
+      "id": "bach",
+      "name": "DCMLab Bach chorales",
+      "tier": 2,
+      "direction": "minimize",
+      "metric": "NLL (nats per next frame)",
+      "group": "music",
+      "type": "next-step",
+      "data": "file",
+      "input": "128 MIDI-pitch binary flags per sixteenth note",
+      "model": {
+        "d_model": 128,
+        "n_layers": 2,
+        "num_heads": 4,
+        "l_max": 128,
+        "batch_size": 64
+      }
+    }
+  ]
+}

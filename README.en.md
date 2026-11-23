@@ -2,85 +2,97 @@
 
 [한국어](README.md) · English
 
-This harness screens Transformer alternatives with inexpensive proxy tasks before large-scale training. It evaluates a candidate `CandidateMixer` with shared backbones, data, seeds, and training budgets, then reports task-level outcomes. EvoScientist can invoke the same evaluation through its shell tool and read the report to design a next candidate.
+Evaluate Transformer alternatives on 18 small proxy tasks. Check a mixer on CPU, record retention and costs by tier, and return feedback to EvoScientist.
 
-## Evaluation scope
+## Quickstart
+Use Linux and Python 3.11. For CPU-only smoke, run `export EVO_PROXY_CPU=1` before setup.
 
-| Tier | Scope | Purpose |
-|---|---|---|
-| 0 | Initial-state metrics without training | Preliminary screening |
-| 1 | 8 synthetic tasks | Isolated capabilities; Transformer wins 4, loses 4 |
-| 2 | 8 small real-data tasks | Real-data checks; Transformer wins 4, loses 4 |
-| 3 | Large language models | Later external validation |
-
-The runnable selection is the final 16 Tier 1 and Tier 2 tasks. Win/loss labels compare Transformer and LSTM over three seeds. Rankings over all nine architectures are incomplete for some tasks. * marks S5 confirmation for Speech Commands, † marks EMNIST as a reserve exceeding diversity capacity, and ‡ marks the [domain-priority rule](docs/PREREG_DOMAIN_PRIORITY.md) for Lipophilicity.
-
-## The 16 tasks
-
-| Task | Input | Metric (↑ higher, ↓ lower) | Data |
-|---|---|---|---|
-| [T1-R1-05 · MAD Compression](tasks/T1-R1-05/README.md) | Tokens | `token_accuracy` ↑ | Files: synthetic cache |
-| [T1-R2-01 · Positional Histogram](tasks/T1-R2-01/README.md) | Tokens | `slot_accuracy` ↑ | Generated at runtime |
-| [T1-R2-02 · String Matching](tasks/T1-R2-02/README.md) | Tokens | `accuracy` ↑ | Generated at runtime |
-| [T1-R0-07 · RegBench](tasks/T1-R0-07/README.md) | Tokens | `next_token_acc` ↑ | Generated at runtime |
-| [T1-R0-04 · Parity](tasks/T1-R0-04/README.md) | Tokens | `mean_best_val_accuracy` ↑ | Files |
-| [T1-R0-05 · Tomita 5](tasks/T1-R0-05/README.md) | Tokens | `mean_best_val_accuracy` ↑ | Files |
-| [T1-R2-04 · Cycle Navigation](tasks/T1-R2-04/README.md) | Tokens | `accuracy_id50_ex50` ↑ | Generated at runtime |
-| [T1-R2-05 · Random Automaton](tasks/T1-R2-05/README.md) | Tokens | `last_state_accuracy_id50_ex50` ↑ | Generated at runtime |
-| [T2-R1-11 · Permuted MNIST](tasks/T2-R1-11/README.md) | Image sequences | `accuracy` ↑ | Files |
-| [T2-R3-05 · Permuted Kuzushiji-49](tasks/T2-R3-05/README.md) | Image sequences | `accuracy` ↑ | Files |
-| [T2-R4-02 · Speech Commands (raw waveform)\*](tasks/T2-R4-02/README.md) | Continuous values | `accuracy` ↑ | Files |
-| [T2-R3-02 · Permuted EMNIST (letters)†](tasks/T2-R3-02/README.md) | Image sequences | `accuracy` ↑ | Files |
-| [T2-R1-04 · TAPE Stability](tasks/T2-R1-04/README.md) | Amino acid sequences | `spearman_valid` ↑ | Files |
-| [T2-R1-09 · enwik8](tasks/T2-R1-09/README.md) | Bytes | `val_bpc` ↓ | Files |
-| [T2-R1-08 · IMDB (byte-level)](tasks/T2-R1-08/README.md) | Bytes | `accuracy` ↑ | Files |
-| [T2-R2-02 · Lipophilicity (SMILES)‡](tasks/T2-R2-02/README.md) | SMILES characters | `rmse_valid` ↓ | Files |
-
-
-## Install and prepare data
-
-Linux and Python 3.11 are recommended. Task listing and unit tests work on CPU; full evaluation needs a CUDA GPU.
 
 ```bash
-git clone https://github.com/awesomesungminyu/kaist_evo_proxy.git
-cd kaist_evo_proxy
 python3.11 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m validation list
+pip install -e .
+evo-proxy setup
 ```
 
-Install the PyTorch build matching your CUDA environment. Prepare source files from the five bundles in the [data guide](docs/DATA.md). Five tasks generate inputs at runtime; 11 require files. The repository contains no datasets or checkpoints.
+Extract the data archives from the [Drive checklist](drive_upload_20261123/README.md) into one `incoming/` folder.
 
 ```bash
-python -m validation prepare --source downloads/extracted --data-root data
-python -m validation data --data-root data
-CUDA_VISIBLE_DEVICES="" python -m unittest discover -s tests -v
+evo-proxy data --source incoming
+evo-proxy doctor --core
+evo-proxy eval examples/candidate_mixer.py --profile smoke --out runs/example
+evo-proxy baseline transformer --profile smoke --out runs/transformer
+pip install EvoScientist==0.4.1
+export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"
+evo-proxy install-skills
+evo-proxy doctor
 ```
 
-## Evaluate a candidate architecture
-
-Define `CandidateMixer(nn.Module)` in one Python file. Its constructor takes `(d_model, num_heads, l_max)` and `forward` maps `[B,T,D]` to `[B,T,D]`. Precheck checks causality, finite outputs and gradients, and the ±10% Transformer-block parameter rule. See the [example](examples/candidate_mixer.py) and [contract](docs/MODELS.md).
+Put `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` in a local `.env` and replace `YOUR_MODEL` with the provider model ID.
 
 ```bash
-CANDIDATE="$PWD/examples/candidate_mixer.py"
-OUT="$PWD/artifacts/example"
-python -m validation precheck --mixer "$CANDIDATE:CandidateMixer" --data-root data --out "$OUT/precheck.json"
-python -m validation suite --mixer "$CANDIDATE:CandidateMixer" --profile smoke --seeds 0 --out "$OUT" --data-root data --tfl-root third_party/tfl --device cpu --jobs 1 --timeout 240
-python -m validation report --suite "$OUT"
+python integrations/evoscientist/run_agent.py --workspace .evo-work \
+  --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
 ```
 
-`evaluate.sh` runs the three stages together. Set `EVO_WORK_ROOT`, `EVO_DATA_ROOT`, and `EVO_TFL_ROOT`; outputs stay under `EVO_WORK_ROOT`.
+## EvoScientist loop
 
-```bash
-export EVO_WORK_ROOT="$PWD/.evo-work" EVO_DATA_ROOT="$PWD/data" EVO_TFL_ROOT="$PWD/third_party/tfl"
-bash integrations/evoscientist/evaluate.sh "$CANDIDATE" "$EVO_WORK_ROOT/runs/example"
-```
+Read skills → write candidate → `evo-proxy eval` → read `feedback.md` → next candidate
 
-Smoke uses one optimizer update per task to check wiring and may take seconds to minutes per task on CPU. Full uses the fixed training budget and evaluation and may take minutes to hours per task on GPU. Actual time depends on the GPU and data. Smoke provides no performance ranking.
+## Profiles
 
-## EvoScientist and limitations
+| Profile | Tasks | Typical planning window | Use |
+|---|---|---|---|
+| smoke | All 18, one CPU update per task | Minutes | Check wiring and finiteness |
+| tier1 | 8 synthetic tasks | Minutes to under an hour | Isolate sequence capabilities |
+| tier2 | 10 dataset tasks | Minutes to under an hour | Measure dataset performance |
+| cascade | Tier 1, then Tier 2 on a relaxed pass | Up to a full run | Stop after the second measured Tier 1 miss |
+| full | All 18, seed 0 on CUDA | Tens of minutes or more | Collect a comparable score for each task |
 
-EvoScientist writes candidates, calls `evaluate.sh` through its shell tool, and reads `report.json`. See the [integration guide](docs/EVOSCIENTIST.md). Supply the endpoint and credential only through `CUSTOM_OPENAI_BASE_URL=<YOUR_OPENAI_COMPATIBLE_ENDPOINT>` and `CUSTOM_OPENAI_API_KEY`; install the framework separately.
+## Tasks
 
-Single-seed full scores are provisional. Four continuous-input tasks (T2-R1-11, T2-R3-05, T2-R4-02, T2-R3-02) showed run-to-run variation even with the same seed; small differences are not evidence of improvement. RegBench evaluates a repeatedly observed development stream. Selection and one-step checks do not establish architectural superiority.
+### Tier 1
+
+| ID | Task | Input | Metric | Data |
+|---|---|---|---|---|
+| T1-R1-05 | MAD Compression | tokens | token_accuracy ↑ | file |
+| T1-R0-07 | RegBench | tokens | next_token_acc ↑ | generated |
+| T1-R2-02 | String Matching | tokens | accuracy ↑ | generated |
+| T1-R2-01 | Positional Histogram | tokens | slot_accuracy ↑ | generated |
+| T1-R2-05 | Random Automaton | tokens | last_state_accuracy_id50_ex50 ↑ | generated |
+| T1-R2-04 | Cycle Navigation | tokens | accuracy_id50_ex50 ↑ | generated |
+| T1-R0-04 | Parity | tokens | mean_best_val_accuracy ↑ | file |
+| T1-R0-05 | Tomita 5 | tokens | mean_best_val_accuracy ↑ | file |
+
+### Tier 2
+
+| ID | Task | Input | Metric | Data |
+|---|---|---|---|---|
+| T2-R1-11 | Permuted MNIST | continuous sequence | accuracy ↑ | file |
+| T2-R3-05 | Permuted Kuzushiji-49 | continuous sequence | accuracy ↑ | file |
+| T2-R4-02 | Speech Commands (raw waveform) | continuous sequence | accuracy ↑ | file |
+| T2-R3-02 | Permuted EMNIST (letters) | continuous sequence | accuracy ↑ | file |
+| T2-R1-04 | TAPE Stability | amino acid tokens | spearman_valid ↑ | file |
+| T2-R1-09 | enwik8 | bytes | val_bpc ↓ | file |
+| T2-R1-08 | IMDB (byte-level) | bytes | accuracy ↑ | file |
+| T2-R2-02 | Lipophilicity (SMILES) | SMILES tokens | rmse_valid ↓ | file |
+| promoters | Human non-TATA promoter classification | ACGTN IDs, 0 padding | accuracy ↑ | file |
+| bach | DCMLab Bach chorales | 128 MIDI-pitch binary flags per sixteenth note | NLL (nats per next frame) ↓ | file |
+
+## Judging
+
+Retention compares with the 1× Transformer three-seed mean. Divide candidate by reference for maximize metrics and reference by candidate for minimize metrics. The task threshold is 0.8. Strict requires 8/8 and 10/10; relaxed requires 7/8 and 9/10. Smoke leaves performance scores and retention empty.
+
+[Transformer reference](reference/transformer_reference.json) · [Baseline verdicts](reference/baseline_verdict.md)
+
+## Candidates and baselines
+
+Copy the example, implement `CandidateMixer(d_model, num_heads, l_max)`, and verify it with `evo-proxy check candidate.py`. Run `evo-proxy baseline NAME --profile smoke` for a stock mixer.
+
+[Candidate example](examples/candidate_mixer.py) · [Baseline mixers](baselines/README.md) · [Excluded tasks](tasks/excluded.md)
+
+## Limits
+
+Resource measurements use serial seed 0 training. Mamba uses the frozen loop implementation. The release leaves learning rates fixed and does not validate concurrent speedup or seed-to-seed cost variation. Candidate Python is imported directly; only evaluate trusted source.
+
+An existing output directory receives a new child run. Each evaluation writes `report.json`, `judged.json`, `resources.json`, and `feedback.md`.

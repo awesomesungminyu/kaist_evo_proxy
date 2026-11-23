@@ -1,0 +1,114 @@
+{
+  "retention_threshold": 0.8,
+  "n_seeds": 3,
+  "tasks": {
+    "T1-R1-05": {
+      "metric": "token_accuracy",
+      "direction": "maximize",
+      "mean": 0.5285970171292623,
+      "threshold": 0.42287761370340987
+    },
+    "T1-R2-01": {
+      "metric": "slot_accuracy",
+      "direction": "maximize",
+      "mean": 0.8907153253202085,
+      "threshold": 0.7125722602561668
+    },
+    "T1-R2-02": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.7558333741294013,
+      "threshold": 0.6046666993035211
+    },
+    "T1-R0-07": {
+      "metric": "next_token_acc",
+      "direction": "maximize",
+      "mean": 0.4482561108605722,
+      "threshold": 0.3586048886884578
+    },
+    "T1-R0-04": {
+      "metric": "mean_best_val_accuracy",
+      "direction": "maximize",
+      "mean": 0.23109567901234568,
+      "threshold": 0.18487654320987656
+    },
+    "T1-R0-05": {
+      "metric": "mean_best_val_accuracy",
+      "direction": "maximize",
+      "mean": 0.2107473544973545,
+      "threshold": 0.1685978835978836
+    },
+    "T1-R2-04": {
+      "metric": "accuracy_id50_ex50",
+      "direction": "maximize",
+      "mean": 0.6837500184774399,
+      "threshold": 0.5470000147819519
+    },
+    "T1-R2-05": {
+      "metric": "last_state_accuracy_id50_ex50",
+      "direction": "maximize",
+      "mean": 0.5572083592414856,
+      "threshold": 0.4457666873931885
+    },
+    "T2-R1-11": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.7850666443506876,
+      "threshold": 0.6280533154805501
+    },
+    "T2-R3-05": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.254533330599467,
+      "threshold": 0.2036266644795736
+    },
+    "T2-R4-02": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.18391609688599905,
+      "threshold": 0.14713287750879925
+    },
+    "T2-R3-02": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.4439999957879384,
+      "threshold": 0.35519999663035073
+    },
+    "T2-R1-04": {
+      "metric": "spearman_valid",
+      "direction": "maximize",
+      "mean": 0.5949063155618297,
+      "threshold": 0.4759250524494638
+    },
+    "T2-R1-09": {
+      "metric": "val_bpc",
+      "direction": "minimize",
+      "mean": 2.072687597735072,
+      "threshold": 2.5908594971688395
+    },
+    "T2-R1-08": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.6431999802589417,
+      "threshold": 0.5145599842071533
+    },
+    "T2-R2-02": {
+      "metric": "rmse_valid",
+      "direction": "minimize",
+      "mean": 0.9876376986503601,
+      "threshold": 1.2345471233129501
+    },
+    "promoters": {
+      "metric": "accuracy",
+      "direction": "maximize",
+      "mean": 0.8370233575503031,
+      "threshold": 0.6696186860402426
+    },
+    "bach": {
+      "metric": "NLL (nats per next frame)",
+      "direction": "minimize",
+      "mean": 13.882838857590398,
+      "threshold": 17.353548571987996
+    }
+  }
+}

@@ -1,0 +1,197 @@
+"""Portable command-line harness and EvoScientist entry point."""
+import argparse
+from importlib.metadata import PackageNotFoundError, version
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+from . import harness as h
+from .feedback import make_feedback
+from .judge import REFERENCE, compare, judge
+from .resources import measure, wait_idle
+
+PROFILES = ('smoke','tier1','tier2','cascade','full')
+SKILLS = ('proxy-harness','mixer-contract','feedback')
+
+
+def install_skills(destination):
+    destination = destination.resolve()
+    destination.mkdir(parents=True,exist_ok=True)
+    for name in SKILLS:
+        source = h.ROOT/'skills'/name
+        target = destination/name
+        if target.exists():
+            if (target/'SKILL.md').read_bytes() != (source/'SKILL.md').read_bytes():
+                raise ValueError(f'Existing skill differs at {target}; choose another directory')
+        else:
+            shutil.copytree(source,target)
+    print(destination)
+
+
+def doctor(core=False):
+    results = {}
+    results['pinned_harness'] = h.installed()
+    results['formal'] = (h.TFL/'src/args.py').is_file()
+    results['retnet'] = (h.HARNESS/'third_party/fla_vendor/fla').is_dir()
+    results['data_18'] = len(rows:=h.data_ready())==18 and all(row['ready'] for row in rows)
+    probe = subprocess.run([sys.executable,'-c',
+        'import json, torch; print(json.dumps({"torch": torch.__version__, "cuda": torch.cuda.is_available()}))'],
+        text=True,capture_output=True)
+    runtime = json.loads(probe.stdout) if probe.returncode==0 else {}
+    results['torch'] = runtime.get('torch','').split('+')[0]=='2.5.1'
+    results['cuda'] = 'not required (CPU setup)' if h.CPU_SETUP else runtime.get('cuda',False)
+    results['nvidia_smi'] = shutil.which('nvidia-smi') is not None or h.CPU_SETUP
+    try:
+        results['evoscientist_0_4_1'] = version('EvoScientist')=='0.4.1'
+    except PackageNotFoundError:
+        results['evoscientist_0_4_1'] = False
+    results['workspace_skills'] = all((h.skills_path()/name/'SKILL.md').is_file() for name in SKILLS)
+    print(json.dumps(results,indent=2))
+    checks = [v for k,v in results.items() if not core or k not in ('evoscientist_0_4_1','workspace_skills')]
+    return int(False in checks)
+
+
+def ordered_tasks(profile,config):
+    tasks=config['tasks']
+    if profile=='tier1':
+        return [task for task in tasks if task['tier']==1]
+    if profile=='tier2':
+        return [task for task in tasks if task['tier']==2]
+    return sorted(tasks,key=lambda t:(t['tier'],t['id'] in ('T1-R0-04','T1-R0-05')))
+
+
+def run_tasks(candidate, profile, out, tasks, checks):
+    smoke = profile=='smoke'
+    budget = 'smoke' if smoke else 'full'
+    reference = h.read(REFERENCE)['tasks']
+    rows, costs = {}, {}
+    tier1_passes, misses, gate, stop = 0, 0, None, 'completed'
+    for task in tasks:
+        task_id=task['id']
+        if profile=='cascade':
+            if task['tier']==1 and misses>=2:
+                gate, stop = False, 'tier1_two_below_threshold'
+                break
+            if task['tier']==2:
+                gate=tier1_passes>=7
+                if not gate:
+                    stop='tier1_two_below_threshold' if misses>=2 else 'tier1_gate_unconfirmed'
+                    break
+        if not smoke:
+            try:
+                wait_idle()
+            except TimeoutError:
+                stop='gpu_idle_timeout'
+                break
+        folder=out/'observations'/task_id
+        folder.mkdir(parents=True)
+        mode='cpu' if smoke else 'cuda'
+        costs[task_id]=measure(h.command('release_tasks','cell','--task',task_id,'--profile',budget,
+            '--mixer',f'{candidate}:CandidateMixer','--out',folder,'--data-root',h.DATA,'--tfl-root',h.TFL),
+            cwd=h.HARNESS,env=h.environment(mode),out=folder,gpu=not smoke)
+        result=folder/'result.json'
+        raw=h.read(result) if result.is_file() else dict(status='failed',error='See process.log')
+        metrics=raw.get('metrics',{})
+        score=metrics.get(task['metric']) if not smoke and raw['status']=='done' else None
+        rows[task_id]=dict(task=task_id,tier=task['tier'],name=task['name'],status=raw['status'],
+                           mean=score, completed_seeds=[0] if raw['status']=='done' else [],
+                           requested_seeds=[0], metric=task['metric'], evidence=raw.get('evidence'),
+                           error=raw.get('error'))
+        if 'smoke_loss' in raw:
+            rows[task_id]['smoke_loss']=raw['smoke_loss']
+        costs[task_id]['parameters']=raw.get('parameters') or {
+            'block_per_layer': checks[task_id].get('block_parameters'),
+            'mixer_per_layer': checks[task_id].get('mixer_parameters'),
+        }
+        native = raw.get('native_result')
+        if smoke and 'smoke_loss' not in raw and native:
+            details=h.read(Path(native))
+            rows[task_id]['smoke_loss']=details.get('loss')
+        if profile=='cascade' and task['tier']==1:
+            ratio=compare(score,reference[task_id])
+            if ratio is not None:
+                tier1_passes+=ratio>=.8
+                misses+=ratio<.8
+        print(f"{task_id}: {raw['status']}",flush=True)
+    if stop=='completed' and any(r['status']!='done' for r in rows.values()):
+        stop='incomplete'
+    return rows,costs,gate,stop
+
+
+def evaluate(candidate,profile,out):
+    if not candidate.is_file():
+        raise ValueError(f'Candidate file missing: {candidate}')
+    target = h.new_output(out)
+    ok,check,extra = h.precheck(candidate,target)
+    config=h.read(h.ROOT/'tasks/tasks.json')
+    tasks=ordered_tasks(profile,config)
+    if ok:
+        with h.serial_gpu(profile!='smoke'):
+            rows,costs,gate,stop=run_tasks(candidate,profile,target,tasks,check['tasks']|extra)
+    else:
+        rows,costs,gate,stop={}, {}, None, 'precheck_failed'
+    report=dict(profile=profile, status='blocked' if not ok else
+                'done' if stop=='completed' else 'incomplete',
+                candidate=check.get('candidate'), performance_comparable=ok and profile!='smoke',
+                gate_passed=gate,stop_reason=stop,
+                tasks=[rows.get(t['id'],dict(task=t['id'],tier=t['tier'],name=t['name'],
+                                             mean=None,status='not_run')) for t in tasks])
+    judged=judge(report,config['tasks'])
+    h.save(target/'report.json',report)
+    h.save(target/'judged.json',judged)
+    h.save(target/'resources.json',costs)
+    (target/'feedback.md').write_text(make_feedback(report,judged,costs),encoding='utf-8')
+    print(f'Output: {target}')
+    return int(stop not in ('completed','tier1_two_below_threshold'))
+
+
+def main(argv=None):
+    parser=argparse.ArgumentParser(prog='evo-proxy',description=__doc__)
+    actions=parser.add_subparsers(dest='command',required=True)
+    actions.add_parser('setup',help='Install the pinned evaluator and dependencies')
+    data=actions.add_parser('data',help='Prepare extracted Drive bundles and check readiness')
+    data.add_argument('--source',type=Path,required=True)
+    diagnose=actions.add_parser('doctor',help='Check Torch, CUDA, datasets, EvoScientist and installed skills')
+    diagnose.add_argument('--core',action='store_true',help='Only require evaluator readiness')
+    skills=actions.add_parser('install-skills',help='Copy skills to <EvoScientist workspace>/skills')
+    skills.add_argument('destination',type=Path,nargs='?',default=h.skills_path())
+    check=actions.add_parser('check',help='Check one candidate on CPU without training')
+    check.add_argument('mixer',type=Path)
+    check.add_argument('--out',type=Path,default=Path('runs/precheck'))
+    ev=actions.add_parser('eval',help='Evaluate a candidate and create reports and feedback')
+    ev.add_argument('mixer',type=Path)
+    base=actions.add_parser('baseline',help='Run a named reference mixer')
+    names=sorted(p.stem for p in (h.ROOT/'baselines/mixers').glob('*.py'))
+    base.add_argument('name',choices=names)
+    for cmd in (ev,base):
+        cmd.add_argument('--profile',choices=PROFILES,default='smoke')
+        cmd.add_argument('--out',type=Path,default=Path('runs/evaluation'))
+    args=parser.parse_args(argv)
+    try:
+        if args.command=='setup':
+            h.setup()
+            return 0
+        if args.command=='install-skills':
+            install_skills(args.destination)
+            return 0
+        if not h.installed():
+            raise ValueError('The evaluator does not match the pin; run evo-proxy setup with a clean install directory')
+        if args.command=='doctor':
+            return doctor(args.core)
+        if args.command=='data':
+            return h.prepare(args.source.resolve())
+        if args.command=='check':
+            target=h.new_output(args.out)
+            ok,_,_=h.precheck(args.mixer.resolve(),target)
+            print(f'Precheck: {"passed" if ok else "failed"} ({target})')
+            return int(not ok)
+        candidate = args.mixer.resolve() if args.command=='eval' else h.ROOT/'baselines/mixers'/f'{args.name}.py'
+        return evaluate(candidate,args.profile,args.out)
+    except (OSError,ValueError,subprocess.SubprocessError) as error:
+        parser.exit(1,f'evo-proxy: {error}\n')
+
+
+if __name__=='__main__':
+    raise SystemExit(main())
