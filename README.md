@@ -37,7 +37,9 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
 
 ## EvoScientist 루프
 
-skill 읽기 → 후보 작성 → `evo-proxy eval` → `feedback.md` 읽기 → 다음 후보
+skill 읽기 → 후보 작성 → `evo-proxy check` → `evo-proxy eval --profile smoke` → `feedback.md` 읽기 → 다음 후보 작성
+
+기본 상한은 모델 호출 40회, precheck를 받는 서로 다른 후보 버전 3개입니다. Smoke로는 실행과 피드백 전달을 확인합니다.
 
 ## 실행 모드
 

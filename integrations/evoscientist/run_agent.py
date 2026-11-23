@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--prompt',type=Path,required=True)
     parser.add_argument('--env-file',type=Path,required=True)
     parser.add_argument('--model',required=True)
-    parser.add_argument('--llm-cap',type=int,default=20)
+    parser.add_argument('--llm-cap',type=int,default=40)
     parser.add_argument('--max-attempts',type=int,default=3,help='Maximum distinct prechecked candidate revisions')
     args=parser.parse_args()
     executable=shutil.which('EvoSci')

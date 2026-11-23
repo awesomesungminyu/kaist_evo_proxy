@@ -37,7 +37,9 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
 
 ## EvoScientist loop
 
-Read skills → write candidate → `evo-proxy eval` → read `feedback.md` → next candidate
+Read skills → write candidate → `evo-proxy check` → `evo-proxy eval --profile smoke` → read `feedback.md` → write next candidate
+
+The defaults are 40 model calls and three distinct prechecked candidate revisions. Smoke checks whether evaluation and feedback delivery work.
 
 ## Profiles
 
