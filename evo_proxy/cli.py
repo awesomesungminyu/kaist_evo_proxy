@@ -101,14 +101,18 @@ def run_tasks(candidate, profile, out, tasks, checks):
                            error=raw.get('error'))
         if 'smoke_loss' in raw:
             rows[task_id]['smoke_loss']=raw['smoke_loss']
-        costs[task_id]['parameters']=raw.get('parameters') or {
-            'block_per_layer': checks[task_id].get('block_parameters'),
-            'mixer_per_layer': checks[task_id].get('mixer_parameters'),
-        }
         native = raw.get('native_result')
-        if smoke and 'smoke_loss' not in raw and native:
-            details=h.read(Path(native))
-            rows[task_id]['smoke_loss']=details.get('loss')
+        details = h.read(Path(native)) if native and Path(native).is_file() else {}
+        per_block = checks[task_id].get('block_parameters')
+        per_mixer = checks[task_id].get('mixer_parameters')
+        layers = task['model']['n_layers']
+        costs[task_id]['parameters'] = raw.get('parameters') or dict(
+            total=details.get('n_params'),
+            block=per_block*layers if per_block is not None else None,
+            mixer=per_mixer*layers if per_mixer is not None else None,
+        )
+        if smoke and 'smoke_loss' not in raw:
+            rows[task_id]['smoke_loss'] = details.get('loss')
         if profile=='cascade' and task['tier']==1:
             ratio=compare(score,reference[task_id])
             if ratio is not None:

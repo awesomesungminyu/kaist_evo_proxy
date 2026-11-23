@@ -8,6 +8,7 @@ Drive folder: <DRIVE_LINK>
 | `proxy-data-final-pool-mad.tar.gz` | 327195 | `bbb6ade421d87e8373b81c4d885e6cbde53a332e6f76dbfc780b4dddab853503` | MAD Compression | Existing |
 | `proxy-data-final-pool-parity.tar.gz` | 279977 | `c333fecc00d8938b5ab2275eb5ce781eeec7b910a3e1bff89375eb5ad4fe3fb8` | Parity | Existing |
 | `proxy-data-final-pool-speech_commands.tar.gz` | 2427893343 | `c77a5d5f7a3ffb8442abda5da0b461410f4900d6c50f3aa5a1a1ee36d2f01a61` | Speech Commands | Existing |
+| `proxy-data-speech-cache.tar.gz` | 693340132 | `00af438336bae43b4e6145711cd5408876c47c63946aaf8f41d6208aa414664c` | Speech Commands exact evaluated arrays | Supplement |
 | `proxy-data-tomita5.tar.gz` | 287766 | `af40131e417d004bbae40fab0c88788ef60b459ed6366422d30d63398a290a41` | Tomita 5 | supplement |
 | `proxy-data-emnist.tar.gz` | 32111870 | `61e0969a195e48f970aa8e951eeee62714e5c9e6693d078876fa72201542e4cf` | Permuted EMNIST | supplement |
 | `proxy-data-lipophilicity.tar.gz` | 6952 | `c6eac263c8a50b3090c87d64c0c4a774d3b9c3d5cc3e1f657fd3b678a2862e7b` | Lipophilicity frozen split; combine with small | supplement |
@@ -15,8 +16,8 @@ Drive folder: <DRIVE_LINK>
 | `proxy-data-bach.tar.gz` | 160200 | `984d96459d66b55a85116bdbb4276371dfae773d7e0f30bd0543ecd8407530c2` | Bach chorales | New |
 | `results_20261123_detail.tar.gz` | 571848 | `95dd8a83da75a77c202e615c60d65b78860f6b86a2c6646eea7f5e25cf0505b4` | Detailed results and resource tables | Results only |
 
-Verify each archive against the SHA-256 above. Extract the four existing data archives first, then the five supplements, into the same directory. Keep the paths inside each archive. The older combined additions archive is redundant when using these supplements.
+Verify each archive against the SHA-256 above. Extract the four existing data archives first, then the six supplements, into the same directory. Keep the paths inside each archive. The older combined additions archive is redundant when using these supplements.
 
-The four existing archives cover eight file-backed tasks. Tomita 5, Permuted EMNIST, and the frozen Lipophilicity split require supplements. Genomics and Bach require the new archives. The other five tasks generate data at runtime.
+The four existing archives cover eight file-backed tasks. Tomita 5, Permuted EMNIST, and the frozen Lipophilicity split require supplements. Genomics and Bach require the new archives. The Speech cache supplement keeps the exact evaluated float arrays; recomputing from the original raw Speech archive can differ slightly. The other five tasks generate data at runtime.
 
 All data archives are below 4 GB. The results archive is optional and is not an input to data preparation. Genomics arrays are derived from Genomic Benchmarks (CC BY 4.0); Bach arrays are derived from DCMLab Bach Chorales (CC0 1.0).
