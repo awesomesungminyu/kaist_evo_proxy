@@ -17,6 +17,13 @@ import urllib.request
 ROOT=Path(__file__).resolve().parents[2]
 
 
+EVALUATION_BOUNDARY = (
+    'Revise only using contract errors printed by check, within three candidate versions. '
+    'After running eval once, stop. Do not open result.md, report.json, judged.json, or resources.json. '
+    'Do not use evaluation results or write a follow-up candidate.'
+)
+
+
 def consume_budget(path,cap):
     path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
     with (path.parent/(path.name+'.lock')).open('a') as lock:
@@ -76,7 +83,7 @@ def limited_gateway(endpoint,key,budget,cap,transcript=None,force_model=None,com
                         payload['tools']=[tool for tool in payload.get('tools',[])
                                           if tool.get('function',{}).get('name') in
                                           ('read_file','write_file','execute','run_in_background')]
-                        payload['tool_choice']='required'
+                        payload['tool_choice']='auto'
                         payload['max_tokens']=4096
                         messages=payload.get('messages',[])
                         user_positions=[i for i,message in enumerate(messages)
@@ -93,12 +100,11 @@ def limited_gateway(endpoint,key,budget,cap,transcript=None,force_model=None,com
                                 message['content']=(
                                     'You are EvoScientist, an autonomous research agent. '
                                     'Use the provided tools to follow the user request exactly. '
-                                    'Do not invent data or results. Treat all reported one-seed '
-                                    'scores as provisional. Do not use subagents, web search, '
+                                    'Do not invent data or results. Do not use subagents, web search, '
                                     'todo tools, or paid APIs. File tool root / is your workspace; '
                                     'shell paths must be relative ./ paths. Do not edit evaluation '
                                     'code, protocol, data, seeds, budget, or evaluate.sh. '
-                                    'Finish by writing the requested files.')
+                                    + EVALUATION_BOUNDARY)
                     body=json.dumps(payload).encode()
                 sink=None
                 if transcript is not None:

@@ -2,123 +2,150 @@
 
 [한국어](README.md) · English
 
-Evaluate Transformer alternatives on 18 small proxy tasks. Check a mixer on CPU, record retention and costs by tier, and return feedback to EvoScientist.
+This tool compares new sequence architectures proposed by EvoScientist against Transformer on 18 small tasks and writes a result table for you to review.
+
+## At a glance
+
+EvoScientist writes a candidate → `evo-proxy check` (contract) → `evo-proxy eval` (train and score) → `result.md` (human review)
 
 ## Quickstart
 
-### What runs automatically
+Use Linux and Python 3.11. The CPU quickstart used about @@DISK@@ GB of disk. Scored modes require a CUDA GPU. Our validation hardware is a TITAN RTX with 24 GB. This walkthrough runs one CPU smoke task, MAD. First-time installation and slower networks can push it past five minutes.
 
-| Command | What it does |
+Get the code with `git clone`. Skip the Release page’s **Source code (zip/tar.gz)** files. The commands below fetch the data from the Release.
+
+```bash
+git clone https://github.com/awesomesungminyu/kaist_evo_proxy.git && cd kaist_evo_proxy  # Get the code and enter its directory
+python3.11 -m venv .venv  # Create a Python environment
+source .venv/bin/activate  # Activate the environment
+pip install -e .  # Install the evo-proxy command
+export EVO_PROXY_CPU=1  # Use CPU-only setup for this smoke test
+evo-proxy setup  # Install the pinned harness and dependencies
+evo-proxy data --download  # Download and prepare the single data bundle
+evo-proxy doctor --core  # Check the evaluator and all 18 tasks
+evo-proxy baseline transformer --profile smoke --task T1-R1-05 --out runs/baseline  # Run the MAD Transformer baseline
+evo-proxy eval examples/candidate_mixer.py --profile smoke --task T1-R1-05 --out runs/example  # Evaluate the example and write its result table
+```
+
+### What success looks like
+
+Excerpt from `evo-proxy doctor --core`. The EvoScientist and skill checks may say `false` until you install them.
+
+@@DOCTOR@@
+
+Evaluation creates `result.md`, `report.json`, `judged.json`, and `resources.json` in `runs/example/`. Task logs are in `observations/`. If the output directory already exists, open the new run directory printed by the command.
+
+Excerpt from `result.md`.
+
+@@RESULT@@
+
+### Connect EvoScientist
+
+```bash
+pip install EvoScientist==0.4.1  # Install the verified EvoScientist version
+export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"  # Set the agent workspace
+evo-proxy install-skills  # Install the two evaluation skills
+evo-proxy doctor  # Check EvoScientist and the skills
+```
+
+Just before launching the agent, put `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` (an HTTPS `/v1` endpoint) in a local `.env`. Replace `YOUR_MODEL` with the provider’s model ID.
+
+```bash
+python integrations/evoscientist/run_agent.py --workspace .evo-work --prompt examples/research_request.md --env-file .env --model YOUR_MODEL  # Check and evaluate one candidate
+```
+
+The agent can use the printed contract errors to check up to three candidate versions. It evaluates once after passing the contract and then stops. A human reads the results. If installed skills conflict, choose a new workspace.
+
+## Read the results
+
+| File | Contents |
 |---|---|
-| `evo-proxy setup` | Installs the pinned evaluator and its dependencies. |
-| `evo-proxy data --download` | Downloads and checks the GitHub Release bundle, then prepares the data. |
-| `evo-proxy install-skills` | Copies skills into the EvoScientist workspace. |
-| `evo-proxy eval` | Checks and evaluates the candidate and writes feedback. |
-| `evo-proxy doctor` | Checks evaluator, data, EvoScientist and skill readiness. |
+| `result.md` | Human-readable scores and Transformer comparisons |
+| `report.json` | Profile, raw scores, and per-task run status |
+| `judged.json` | Retention and pass thresholds by task and tier |
+| `resources.json` | Time, memory, and parameters observed for the run |
 
-### What you provide
+If reference accuracy is 0.90 and the candidate scores 0.72, retention is `0.72 ÷ 0.90 = 0.80`, a pass. For a metric where lower is better, divide in the other direction. A reference loss of 2.0 and candidate loss of 2.5 also give `2.0 ÷ 2.5 = 0.80`. Seven passes and one miss in Tier 1 fail strict and pass relaxed.
 
-1. Use Linux and Python 3.11. Full evaluation requires a CUDA GPU. For CPU smoke, run `export EVO_PROXY_CPU=1` before setup.
-2. Set `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` in your local `.env`.
-3. Replace `YOUR_MODEL` in the agent command with the provider's model ID.
-
-### Command sequence
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-evo-proxy setup
-```
-
-
-
-```bash
-evo-proxy data --download
-evo-proxy doctor --core
-evo-proxy eval examples/candidate_mixer.py --profile smoke --out runs/example
-evo-proxy baseline transformer --profile smoke --out runs/baseline
-pip install EvoScientist==0.4.1
-export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"
-evo-proxy install-skills
-evo-proxy doctor
-```
-
-Put `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` in a local `.env` and replace `YOUR_MODEL` with the provider model ID.
-
-```bash
-python integrations/evoscientist/run_agent.py --workspace .evo-work \
-  --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
-```
-
-### Data
-
-`evo-proxy data --download` fetches one GitHub Release file, about 882 MB. Download, verification, and preparation took about 2 minutes in our check. Use `--tasks tier1|tier2|all` or pass task IDs to select tasks.
-
-For manual setup, download the file from the [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124) and run `evo-proxy data --source proxy-task-bench-data_20261124.tar`. An extracted directory is also supported.
-
-[Drive fallback mirror](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [Data licenses and citations](DATA_LICENSES.md)
-
-## EvoScientist loop
-
-Read skills → write candidate → `evo-proxy check` → `evo-proxy eval --profile smoke` → read `feedback.md` → write next candidate
-
-The defaults are 40 model calls and three distinct prechecked candidate revisions. Smoke checks whether evaluation and feedback delivery work.
+Use `--baseline-run runs/baseline` to choose the resource comparison, or let the CLI find the latest Transformer run of the same profile under `runs/`. GPU time and VRAM show `—` in CPU smoke. Use `evo-proxy report runs/example` to rebuild the table.
 
 ## Profiles
 
-| Profile | Tasks | Typical planning window | Use |
+| Profile | Tasks | Planning estimate | When to use it |
 |---|---|---|---|
-| smoke | All 18, one CPU update per task | Minutes | Check wiring and finiteness |
-| tier1 | 8 synthetic tasks | Minutes to under an hour | Isolate sequence capabilities |
-| tier2 | 10 dataset tasks | Minutes to under an hour | Measure dataset performance |
-| cascade | Tier 1, then Tier 2 on a relaxed pass | Up to a full run | Stop after the second measured Tier 1 miss |
-| full | All 18, seed 0 on CUDA | Tens of minutes or more | Collect a comparable score for each task |
+| `smoke` | Defaults to all 18, one CPU update per task. Select one with `--task` | Seconds for MAD, minutes for the suite | Check installation and execution |
+| `tier1` | Eight Tier 1 tasks on CUDA | Minutes to an hour or longer | Compare isolated capabilities |
+| `tier2` | Ten Tier 2 tasks on CUDA | Minutes to an hour or longer | Compare on real data |
+| `cascade` | Start with Tier 1. Stop early after two measured misses below 0.8. Run Tier 2 once seven Tier 1 passes are confirmed | Part of Tier 1 up to a full run | Spend Tier 2 time on candidates clearing the Tier 1 gate |
+| `full` | All 18 on CUDA | Tens of minutes or longer | Collect comparable scores across the suite |
+
+Times are planning estimates. Scored modes use the frozen seed 0 workload. Cascade skips Tier 2 if failures or missing results leave fewer than seven confirmed Tier 1 passes.
 
 ## Tasks
 
 ### Tier 1
 
-| ID | Task | Input | Metric | Data |
-|---|---|---|---|---|
-| T1-R1-05 | MAD Compression | tokens | token_accuracy ↑ | file |
-| T1-R0-07 | RegBench | tokens | next_token_acc ↑ | generated |
-| T1-R2-02 | String Matching | tokens | accuracy ↑ | generated |
-| T1-R2-01 | Positional Histogram | tokens | slot_accuracy ↑ | generated |
-| T1-R2-05 | Random Automaton | tokens | last_state_accuracy_id50_ex50 ↑ | generated |
-| T1-R2-04 | Cycle Navigation | tokens | accuracy_id50_ex50 ↑ | generated |
-| T1-R0-04 | Parity | tokens | mean_best_val_accuracy ↑ | file |
-| T1-R0-05 | Tomita 5 | tokens | mean_best_val_accuracy ↑ | file |
+Synthetic tasks that isolate one capability at a time.
+
+| ID | Task | Input | Metric | Data | Capability |
+|---|---|---|---|---|---|
+| T1-R1-05 | MAD Compression | tokens | token_accuracy ↑ | file | Memory and retrieval |
+| T1-R0-07 | RegBench | tokens | next_token_acc ↑ | generated | Rule learning |
+| T1-R2-02 | String Matching | tokens | accuracy ↑ | generated | Memory and retrieval |
+| T1-R2-01 | Positional Histogram | tokens | slot_accuracy ↑ | generated | Counting |
+| T1-R2-05 | Random Automaton | tokens | last_state_accuracy_id50_ex50 ↑ | generated | State tracking |
+| T1-R2-04 | Cycle Navigation | tokens | accuracy_id50_ex50 ↑ | generated | State tracking |
+| T1-R0-04 | Parity | tokens | mean_best_val_accuracy ↑ | file | State tracking |
+| T1-R0-05 | Tomita 5 | tokens | mean_best_val_accuracy ↑ | file | State tracking |
 
 ### Tier 2
 
-| ID | Task | Input | Metric | Data |
-|---|---|---|---|---|
-| T2-R1-11 | Permuted MNIST | continuous sequence | accuracy ↑ | file |
-| T2-R3-05 | Permuted Kuzushiji-49 | continuous sequence | accuracy ↑ | file |
-| T2-R4-02 | Speech Commands (raw waveform) | continuous sequence | accuracy ↑ | file |
-| T2-R3-02 | Permuted EMNIST (letters) | continuous sequence | accuracy ↑ | file |
-| T2-R1-04 | TAPE Stability | amino acid tokens | spearman_valid ↑ | file |
-| T2-R1-09 | enwik8 | bytes | val_bpc ↓ | file |
-| T2-R1-08 | IMDB (byte-level) | bytes | accuracy ↑ | file |
-| T2-R2-02 | Lipophilicity (SMILES) | SMILES tokens | rmse_valid ↓ | file |
-| promoters | Human non-TATA promoter classification | ACGTN IDs, 0 padding | accuracy ↑ | file |
-| bach | DCMLab Bach chorales | 128 MIDI-pitch binary flags per sixteenth note | NLL (nats per next frame) ↓ | file |
+Tasks drawn from real datasets.
 
-## Judging
+| ID | Task | Input | Metric | Data | Data type |
+|---|---|---|---|---|---|
+| T2-R1-11 | Permuted MNIST | continuous sequence | accuracy ↑ | file | Continuous signals |
+| T2-R3-05 | Permuted Kuzushiji-49 | continuous sequence | accuracy ↑ | file | Continuous signals |
+| T2-R4-02 | Speech Commands (raw waveform) | continuous sequence | accuracy ↑ | file | Continuous signals |
+| T2-R3-02 | Permuted EMNIST (letters) | continuous sequence | accuracy ↑ | file | Continuous signals |
+| T2-R1-04 | TAPE Stability | amino acid tokens | spearman_valid ↑ | file | Biological and chemical sequences |
+| T2-R1-09 | enwik8 | bytes | val_bpc ↓ | file | Language and text |
+| T2-R1-08 | IMDB (byte-level) | bytes | accuracy ↑ | file | Language and text |
+| T2-R2-02 | Lipophilicity (SMILES) | SMILES tokens | rmse_valid ↓ | file | Biological and chemical sequences |
+| promoters | Genomics (Human non-TATA promoters) | ACGTN IDs, 0 padding | accuracy ↑ | file | Biological and chemical sequences |
+| bach | Bach Chorales | 128 MIDI-pitch binary flags per sixteenth note | NLL (nats per next frame) ↓ | file | Music |
 
-Retention compares with the 1× Transformer three-seed mean. Divide candidate by reference for maximize metrics and reference by candidate for minimize metrics. The task threshold is 0.8. Strict requires 8/8 and 10/10; relaxed requires 7/8 and 9/10. Smoke leaves performance scores and retention empty.
+## Judging and reference values
 
-[Transformer reference](reference/transformer_reference.json) · [Baseline verdicts](reference/baseline_verdict.md)
+Retention uses the 1× Transformer three-seed mean. The pass threshold is 0.8. Strict requires 8/8 and 10/10, and relaxed requires 7/8 and 9/10. Smoke leaves performance scores and retention empty.
 
-## Candidates and baselines
+[Transformer reference](reference/transformer_reference.json) · [Baseline verdicts](reference/baseline_verdict.md) · [Baseline mixers](baselines/README.md) · [Excluded tasks](tasks/excluded.md)
 
-Copy the example, implement `CandidateMixer(d_model, num_heads, l_max)`, and verify it with `evo-proxy check candidate.py`. Run `evo-proxy baseline NAME --profile smoke` for a stock mixer.
+## Data
 
-[Candidate example](examples/candidate_mixer.py) · [Baseline mixers](baselines/README.md) · [Excluded tasks](tasks/excluded.md)
+By default `evo-proxy data --download` fetches one file, about 882 MB, from the [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124). Prior measured download and preparation times were 88–116 seconds. Your network may be slower.
+
+For manual setup, get `proxy-task-bench-data_20261124.tar` from the Release and run `evo-proxy data --source proxy-task-bench-data_20261124.tar`.
+
+[Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) is the automatic fallback mirror if the Release download or verification fails. [Data licenses and sources](DATA_LICENSES.md)
+
+## Troubleshooting
+
+| Symptom | What to do |
+|---|---|
+| Release download fails | The command tries Drive automatically. If both fail, use the manual link printed by the command. |
+| Restricted internet | Transfer the Release TAR from a connected machine and use `evo-proxy data --source path/to/file.tar`. Harness setup also needs network access. |
+| Torch or CUDA error | Check `torch` and `cuda` in `evo-proxy doctor --core`. Torch 2.5.1 is required. Use a CUDA build compatible with your GPU driver for scored runs. Set `EVO_PROXY_CPU=1` before setup for CPU smoke. |
+| `data_18: false` | Rerun `evo-proxy data --download` and look for missing tasks. Preparing a subset with `--tasks` leaves the all-data check false. |
+| GPU out of memory | Check `observations/<ID>/process.log`, then try again when other GPU jobs are done. CPU smoke can check the installation. |
+| Contract check fails | Use the bounds, causality, shape, or backward errors printed by `evo-proxy check`. If precheck blocks eval, its `result.md` includes the diagnostics. |
 
 ## Limits
 
-Resource measurements use serial seed 0 training. Mamba uses the frozen loop implementation. The release leaves learning rates fixed and does not validate concurrent speedup or seed-to-seed cost variation. Candidate Python is imported directly; only evaluate trusted source.
+Resource measurements use serial seed 0 training. Mamba uses the frozen loop implementation. The release leaves learning rates fixed and does not validate concurrent speedup or seed-to-seed cost variation. Candidate Python is imported directly, so only evaluate trusted source.
 
-An existing output directory receives a new child run. Each evaluation writes `report.json`, `judged.json`, `resources.json`, and `feedback.md`.
+## Related repository, citation, and questions
+
+`evo-proxy setup` installs the pinned [evaluation harness B](https://github.com/awesomesungminyu/KAIST-Intern-Proxy-Task-Bench) for you. The [candidate example](examples/candidate_mixer.py) follows the `CandidateMixer(d_model, num_heads, l_max)` contract.
+
+Cite **KAIST Evo Proxy**, the repository URL and commit, and the relevant sources in [Data licenses and citations](DATA_LICENSES.md). Ask questions in [GitHub Issues](https://github.com/awesomesungminyu/kaist_evo_proxy/issues).

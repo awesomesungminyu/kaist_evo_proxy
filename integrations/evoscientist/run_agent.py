@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import time
 
-from adapter import limited_gateway
+from adapter import EVALUATION_BOUNDARY, limited_gateway
 
 QUIET = ('memory_workers_enabled', 'memory_observations_enabled', 'memory_skill_synthesis_enabled',
          'memory_profile_enabled', 'enable_scheduler', 'enable_async_subagents')
@@ -47,7 +47,7 @@ def main():
     parser.add_argument('--env-file',type=Path,required=True)
     parser.add_argument('--model',required=True)
     parser.add_argument('--llm-cap',type=int,default=40)
-    parser.add_argument('--max-attempts',type=int,default=3,help='Maximum distinct prechecked candidate revisions')
+    parser.add_argument('--max-attempts',type=int,choices=range(1,4),default=3,help='Maximum distinct prechecked candidate revisions')
     args=parser.parse_args()
     executable=shutil.which('EvoSci')
     if not executable or min(args.llm_cap,args.max_attempts)<1:
@@ -83,7 +83,7 @@ def main():
                 print(f'EvoScientist configuration did not accept {name}')
                 return 1
         command = [executable,'--workdir',str(workspace),'--ui','cli','--auto-mode',
-                   '--output-format','stream-json','-p',args.prompt.read_text(encoding='utf-8')]
+                   '--output-format','stream-json','-p',args.prompt.read_text(encoding='utf-8')+'\n\n'+EVALUATION_BOUNDARY]
         result = run_engine(command,env,workspace,runtime)
     print(f'Agent evidence: {runtime}')
     return result
