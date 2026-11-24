@@ -166,3 +166,5 @@ Resource measurements use serial seed 0 training. Mamba uses the frozen loop imp
 Cite **KAIST Evo Proxy**, the repository URL and commit, and the relevant sources in [Data licenses and citations](DATA_LICENSES.md). Ask questions in [GitHub Issues](https://github.com/awesomesungminyu/kaist_evo_proxy/issues).
 
 If installation raises ReadTimeoutError, rerun the same command. Compatible installed packages are skipped. An interrupted package download may restart when caching is disabled.
+
+You can run `evo-proxy check examples/candidate_mixer.py` before downloading data. Dataset-dependent checks are deferred; evaluation still requires prepared data.

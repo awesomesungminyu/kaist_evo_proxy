@@ -142,9 +142,9 @@ def checked(candidate, target, command, gpu=False):
         elif gpu:
             with h.serial_gpu(True):
                 wait_idle()
-                result = h.precheck(candidate,target,gpu=True)
+                result = h.precheck(candidate,target,gpu=True,contract_only=command=='check')
         else:
-            result = h.precheck(candidate,target)
+            result = h.precheck(candidate,target,contract_only=command=='check')
         if record is not None:
             record['status'] = 'passed' if result[0] else 'blocked' if blocked else 'failed'
     return result
@@ -191,7 +191,8 @@ def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_mod
     h.save(target/'judged.json',judged)
     h.save(target/'resources.json',costs)
     write_result(target, baseline_path)
-    print(f'Output: {target}')
+    print(f'Output: {target}', flush=True)
+    print('EVALUATION_COMPLETE: human result ready. End the agent task now.', flush=True)
     return int(stop not in ('completed','tier1_two_below_threshold'))
 
 
@@ -206,7 +207,7 @@ def agent_prompt(profile, task, out):
     if profile == 'smoke':
         evaluation += f' --task {task or "T1-R1-05"}'
         header = 'Connection check / 연결 확인용: one CPU smoke task.\n\n'
-        finish = 'Wait for the eval command to finish, then end the session.'
+        finish = 'Wait for eval to finish. When EVALUATION_COMPLETE appears, immediately reply DONE and end the task. Do not call any further tool or read any file.'
     else:
         evaluation += ' --background'
         header = (f'Scored evaluation: {profile}.\n'
@@ -312,6 +313,7 @@ def main(argv=None):
             ok,check,extra=checked(args.mixer.resolve(),target,'check',args.gpu_benchmark)
             print(f'Precheck: {"passed" if ok else "failed"}')
             print(format_precheck(check,extra))
+            print('Dataset-dependent checks: data preparation required / 데이터 준비 후 확인')
             return int(not ok)
         candidate = args.mixer.resolve() if args.command=='eval' else h.ROOT/'baselines/mixers'/f'{args.name}.py'
         if args.task and args.profile!='smoke':

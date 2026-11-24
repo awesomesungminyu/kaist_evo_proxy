@@ -33,6 +33,8 @@ export EVO_PROXY_BIN="$KEP_USER/.venv/bin/evo-proxy"
 
 작업공간과 하니스의 `skills/`가 같으면 기존 파일을 그대로 사용합니다.
 
+데이터를 받기 전에도 `"$EVO_PROXY_BIN" check examples/candidate_mixer.py`로 인과성·shape·backward·파라미터 계약을 검사할 수 있습니다. 데이터가 필요한 검증은 준비 후 확인으로 표시하며 실제 eval은 데이터를 요구합니다.
+
 ### 2. 연결 확인과 실제 평가
 
 현재 셸에 다음 실행 함수를 정의하세요. EvoSci 실행은 하니스 작업공간 격리를 유지합니다.
@@ -61,7 +63,7 @@ launch_eval smoke "$SMOKE_RUN"
 "$EVO_PROXY_BIN" status "$SMOKE_RUN/eval"
 ```
 
-기본 smoke는 MAD 한 과제입니다. 연결 확인용이며, 다른 단일 과제는 `evo-prompt --profile smoke --task <ID>`로 고릅니다. 에이전트는 eval 종료까지만 기다리고 결과 파일을 열지 않습니다.
+기본 smoke는 MAD 한 과제입니다. 연결 확인용이며, 다른 단일 과제는 `evo-prompt --profile smoke --task <ID>`로 고릅니다. 에이전트는 eval 종료까지만 기다립니다. `EVALUATION_COMPLETE`가 나오면 추가 명령이나 파일 읽기 없이 즉시 종료하며 결과 파일은 사람이 엽니다.
 
 **② 실제 평가 · tier1 또는 full**
 
@@ -120,7 +122,9 @@ If your EvoScientist version differs, run `.venv-evoscientist/bin/pip install Ev
 
 ### 1. Prepare the evaluator
 
-Run the [setup block above](#1-하니스-준비) with your absolute paths. It keeps the evaluator and data at `$HOME/.cache/kaist-evo-proxy` by default. Use the commented CPU-only export only for a connection check on a machine without a GPU. The two existing skills are left in place when the requested destination is the harness workspace itself.
+Run the [setup block above](#1-하니스-준비) with your absolute paths. The evaluator lives at `$KEP_USER`; downloaded data defaults to `$HOME/.cache/kaist-evo-proxy`. Use the commented CPU-only export only for a connection check on a machine without a GPU. The two existing skills are left in place when the requested destination is the harness workspace itself.
+
+Before downloading data, `"$EVO_PROXY_BIN" check examples/candidate_mixer.py` checks causality, shape, backward and parameters. Dataset-dependent checks are marked deferred; evaluation still requires prepared data.
 
 ### 2. Connection check and scored evaluation
 
@@ -134,7 +138,7 @@ launch_eval smoke "$SMOKE_RUN"
 "$EVO_PROXY_BIN" status "$SMOKE_RUN/eval"
 ```
 
-MAD is the default. To select a different single task, generate a prompt with `--profile smoke --task <ID>`. The agent waits for eval to finish and leaves result files for you.
+MAD is the default. To select a different single task, generate a prompt with `--profile smoke --task <ID>`. After `EVALUATION_COMPLETE`, the agent must immediately end without another command or file read. Result files are left for you.
 
 **② Scored evaluation · tier1 or full**
 

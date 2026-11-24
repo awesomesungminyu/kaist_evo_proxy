@@ -56,6 +56,8 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 자원: Transformer 대비 GPU 시간 —, 최대 VRAM —, 파라미터(블록) ×1.00
 ```
 
+데이터를 받기 전에도 `evo-proxy check examples/candidate_mixer.py`로 계약을 검사할 수 있습니다. 데이터 의존 검증은 준비 후 확인하며 eval에는 데이터가 필요합니다.
+
 ### EvoScientist 연결
 
 1. 연구실 EvoScientist와 평가 도구를 별도 가상환경에 준비합니다.

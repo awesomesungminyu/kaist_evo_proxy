@@ -17,7 +17,8 @@ check. Use at most three distinct candidate versions in total. On a third
 failure, stop. After check passes, run exactly:
 evo-proxy eval ./runs/kep_smoke/candidate_mixer.py --profile smoke --task T1-R1-05 --out ./runs/kep_smoke/eval
 
-Wait for the eval command to finish, then end the session.
+Wait for the eval command to finish. When EVALUATION_COMPLETE appears, immediately reply DONE and end the task.
+Do not call any further tool or read any file after eval.
 Do not open result.md, report.json,
 judged.json, or resources.json. Do not write a follow-up candidate, interpret
 the evaluation, or use its results for a new design. The human reads the

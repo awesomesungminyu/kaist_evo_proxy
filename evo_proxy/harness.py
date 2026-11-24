@@ -167,12 +167,17 @@ def new_output(path):
         return Path(tempfile.mkdtemp(prefix='run-',dir=path))
 
 
-def precheck(candidate, out, gpu=False):
+def precheck(candidate, out, gpu=False, contract_only=False):
     ref = f'{candidate}:CandidateMixer'
     output = out/'precheck.json'
     extension = out/'precheck_extra.json'
     args = ['validation','precheck','--mixer',ref,'--data-root',DATA,'--out',output]
-    if gpu:
+    if contract_only:
+        args = ['evo_proxy.contract', ref, output]
+        if gpu:
+            args.append('--gpu')
+
+    if gpu and not contract_only:
         args.append('--gpu-benchmark')
     with (out/'precheck_official.log').open('w') as log:
         official = run(*args,device=None if gpu else 'cpu',stdout=log,stderr=subprocess.STDOUT)
