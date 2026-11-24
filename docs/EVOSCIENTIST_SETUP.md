@@ -8,6 +8,8 @@
 
 [AI4Science_archive의 EvoScientist 설치 안내](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist)를 따르세요. 이 절차는 **EvoScientist 0.4.4**와 `deepseek-v4-flash`에서 검증했습니다. 연구실 `.venv-evoscientist`와 하니스용 `.venv`는 분리합니다. 연구실의 `evoscientist/.env`에 endpoint와 키를 준비하고, EvoSci의 provider를 `custom-openai`로 설정합니다.
 
+설치된 EvoScientist 버전이 검증 버전과 다르면 연구실 저장소 루트에서 `.venv-evoscientist/bin/pip install EvoScientist==0.4.4`를 실행하세요.
+
 ### 1. 하니스 준비
 
 경로를 실제 위치로 바꾸세요. 이미 준비한 데이터가 있으면 그 `EVO_PROXY_HOME`을 그대로 쓸 수 있습니다.
@@ -103,11 +105,17 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 
 세션과 메모리는 기본적으로 `~/.evoscientist/`, 설정은 `~/.config/evoscientist/`에 남습니다. `--mode run` 대신 위의 격리된 `--workdir`를 사용합니다. 작업공간 밖의 파일에 접근할 필요가 없습니다.
 
+### 알려진 제한
+
+Tier·full 에이전트 실행은 모델 게이트웨이 장애로 검증을 마치지 못했으며, GPU 완주 점수는 측정하지 않았습니다.
+
 ## English
 
 ### 0. Install the lab EvoScientist
 
 Follow the [AI4Science_archive setup](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist). This guide was verified with **EvoScientist 0.4.4** and `deepseek-v4-flash`. Keep the lab and evaluator virtual environments separate. Configure `custom-openai` and put the endpoint and key in the lab checkout's `evoscientist/.env`.
+
+If your EvoScientist version differs, run `.venv-evoscientist/bin/pip install EvoScientist==0.4.4` from the lab repository root.
 
 ### 1. Prepare the evaluator
 
@@ -169,6 +177,10 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 | Tavily warning | This evaluation does not use web search. |
 
 Session and memory files normally live in `~/.evoscientist/`. Settings are in `~/.config/evoscientist/`. Use the isolated `--workdir` launch above. The separate session mode roots the shell in its run subdirectory.
+
+### Known limitations
+
+A model gateway outage prevented end-to-end tier and full agent verification. Completed GPU scores were not measured.
 
 ### Standalone launcher
 
