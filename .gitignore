@@ -7,3 +7,8 @@ artifacts/
 third_party/tfl/
 third_party/fla_vendor/
 downloads/
+
+*.egg-info/
+.venv/
+.evo-work/
+runs/

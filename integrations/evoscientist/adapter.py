@@ -22,9 +22,14 @@ def consume_budget(path,cap):
     with (path.parent/(path.name+'.lock')).open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
         state=json.loads(path.read_text()) if path.exists() else dict(calls=0)
-        if state['calls']>=cap:raise ValueError('Local LLM call cap exhausted')
-        state['calls']+=1
+        exhausted=state['calls']>=cap
+        if exhausted:
+            state['rejected']=state.get('rejected',0)+1
+        else:
+            state['calls']+=1
         temporary=path.with_suffix('.tmp');temporary.write_text(json.dumps(state));temporary.replace(path)
+        if exhausted:
+            raise ValueError('Local LLM call cap exhausted')
         return state['calls']
 
 
@@ -150,57 +155,3 @@ def limited_gateway(endpoint,key,budget,cap,transcript=None,force_model=None,com
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:yield f'http://127.0.0.1:{server.server_port}/v1'
     finally:server.shutdown();server.server_close();thread.join(timeout=5)
-
-
-def generate(feedback,folder,count,backend,cap,budget,work):
-    folder=Path(folder);folder.mkdir(parents=True,exist_ok=True);work=Path(work)
-    receipt=work/'generation.json'
-    if receipt.exists():
-        previous=json.loads(receipt.read_text())
-        if all(Path(p).is_file() for p in previous['files']):return previous
-    prompt=(ROOT/'integrations/evoscientist/prompt_template.md').read_text()
-    prompt+='\n\n'+Path(feedback).read_text()+f'\n\nReturn at most {count} candidates. Write generated_candidates.json with candidates:[{{name,code}}]. Each code defines CandidateMixer.\n'
-    (work/'next_prompt.md').write_text(prompt)
-    reason=None;bundle=None;actual='mock'
-    try:
-        if backend=='mock':raise RuntimeError('Explicit offline mock mode')
-        endpoint=_endpoint();key=os.environ.get('CUSTOM_OPENAI_API_KEY')
-        if not key:raise RuntimeError('Local endpoint returned 401 without credentials; CUSTOM_OPENAI_API_KEY is absent')
-        executable=os.environ.get('EVO_SCI_BIN') or str(work.parents[1]/'venv/bin/EvoSci')
-        if not Path(executable).is_file():raise RuntimeError('EvoSci is not installed in the allowed venv')
-        runtime=work/'evoscientist_runtime';runtime.mkdir(parents=True,exist_ok=True)
-        env=os.environ.copy()
-        for k in list(env):
-            if k.endswith('API_KEY'):env.pop(k,None)
-        env.update(EVOSCIENTIST_DATA_DIR=str(runtime/'data'),EVOSCIENTIST_WORKSPACE_DIR=str(runtime/'workspace'),
-            XDG_CONFIG_HOME=str(runtime/'config'),XDG_CACHE_HOME=str(runtime/'cache'),TMPDIR=str(runtime),PYTHONDONTWRITEBYTECODE='1')
-        with limited_gateway(endpoint,key,budget,cap) as gateway:
-            env.update(CUSTOM_OPENAI_BASE_URL=gateway,CUSTOM_OPENAI_API_KEY='local-gateway')
-            for keyname,value in [('provider','custom-openai'),('model',os.environ.get('EVO_MODEL','default'))]:
-                subprocess.run([executable,'config','set',keyname,value],env=env,cwd=runtime,check=True,capture_output=True,text=True,timeout=30)
-            with (work/'evoscientist.log').open('w') as log:
-                # No --dangerous: use the framework's workspace mapping. Tools can call our shell adapter.
-                process=subprocess.Popen([executable,'--ui','cli','--mode','run','--name','generation','--auto-mode','-p',prompt],env=env,cwd=runtime,stdout=log,stderr=subprocess.STDOUT,start_new_session=True)
-                try:code=process.wait(timeout=600)
-                except subprocess.TimeoutExpired:
-                    import signal
-                    os.killpg(process.pid,signal.SIGTERM);process.wait(timeout=10);raise RuntimeError('EvoScientist generation timed out')
-            if code:raise RuntimeError(f'EvoScientist exited {code}')
-            outputs=list(runtime.rglob('generated_candidates.json'))
-            if not outputs:raise RuntimeError('EvoScientist did not produce a candidate bundle')
-            bundle=json.loads(max(outputs,key=lambda p:p.stat().st_mtime).read_text());actual='evoscientist'
-    except Exception as exc:
-        reason=f'{type(exc).__name__}: {exc}'
-        if backend=='evoscientist':raise
-    files=[]
-    if bundle is None:
-        response=json.loads((ROOT/'integrations/evoscientist/mock_response.json').read_text())
-        (work/'mock_response.json').write_text(json.dumps(response,indent=2))
-        reference=(ROOT/'examples/candidate_mixer.py').read_text()
-        candidates=[dict(name=r['name'],code=reference+f'\n# Offline wiring fixture {i+1}; no architecture or performance claim.\nCandidateMixer = CandidateMixer\n') for i,r in enumerate(response['candidates'][:count])]
-    else:candidates=bundle['candidates'][:count]
-    for i,item in enumerate(candidates):
-        if not isinstance(item.get('code'),str) or len(item['code'])>100000:raise ValueError('Invalid candidate code size')
-        path=folder/f'{i+1}_candidate.py';path.write_text(item['code']);files.append(str(path))
-    result=dict(backend=actual,fallback_reason=reason,files=files,feedback=str(feedback),llm_calls=json.loads(Path(budget).read_text())['calls'] if Path(budget).exists() else 0)
-    receipt.write_text(json.dumps(result,indent=2));return result
