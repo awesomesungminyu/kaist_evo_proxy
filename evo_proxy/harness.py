@@ -1,6 +1,7 @@
 """Install and invoke the pinned evaluator in the current virtual environment."""
 from contextlib import contextmanager
 import fcntl
+from importlib import metadata
 import json
 import os
 from pathlib import Path
@@ -71,12 +72,48 @@ def setup():
             checkout.rename(HARNESS)
     if not installed():
         raise ValueError(f'The checkout at {HARNESS} does not match the pinned commit')
-    if CPU_SETUP:
-        subprocess.run([sys.executable,'-m','pip','install','--index-url',
-                        'https://download.pytorch.org/whl/cpu','torch==2.5.1'],check=True)
-    subprocess.run([sys.executable,'-m','pip','install','-r',str(HARNESS/'requirements.txt')],check=True)
-    for dependency in ('formal','retnet'):
-        subprocess.run(['bash','setup.sh',dependency],cwd=HARNESS,check=True)
+    timeout = os.getenv('PIP_DEFAULT_TIMEOUT', '120')
+    try:
+        if float(timeout) <= 0:
+            raise ValueError
+    except ValueError:
+        raise ValueError('PIP_DEFAULT_TIMEOUT must be a positive number') from None
+    requirements = [line.strip() for line in (HARNESS/'requirements.txt').read_text().splitlines()
+                    if line.strip() and not line.lstrip().startswith('#')]
+    for requirement in requirements:
+        options = ['--index-url', 'https://download.pytorch.org/whl/cpu'] if CPU_SETUP and requirement.startswith('torch==') else []
+        install_requirement(requirement, timeout, options)
+    subprocess.run(['bash', 'setup.sh', 'formal'], cwd=HARNESS, check=True)
+    vendor = HARNESS/'third_party/fla_vendor'
+    for requirement in ('flash-linear-attention==0.3.1', 'einops==0.8.1'):
+        install_requirement(requirement, timeout, ['--no-deps', '--target', str(vendor)], vendor)
+
+
+def install_requirement(requirement, timeout, options, target=None):
+    # Packaging ships with pip, including in a fresh Python virtual environment.
+    from pip._vendor.packaging.requirements import Requirement
+
+    spec = Requirement(requirement)
+    if target is None:
+        try:
+            current = metadata.version(spec.name)
+        except metadata.PackageNotFoundError:
+            current = None
+    else:
+        normalized = lambda name: re.sub(r'[-_.]+', '-', name).lower()
+        current = next((dist.version for dist in metadata.distributions(path=[str(target)])
+                        if normalized(dist.metadata['Name']) == normalized(spec.name)), None)
+    if current is not None and spec.specifier.contains(current, prereleases=True):
+        print(f'Already installed: {spec.name} {current}; skipping', flush=True)
+        return
+    args = [sys.executable, '-m', 'pip', 'install', '--timeout', str(timeout), '--retries', '10',
+            *options, requirement]
+    try:
+        subprocess.run(args, check=True)
+    except subprocess.CalledProcessError:
+        print(f'Failed package: {spec.name}', file=sys.stderr, flush=True)
+        raise ValueError('같은 명령을 다시 실행하면 이어서 설치됩니다. '
+                         'Run the same command again to continue; installed compatible packages are skipped.') from None
 
 
 def data_ready():

@@ -15,6 +15,7 @@
 경로를 실제 위치로 바꾸세요. 이미 준비한 데이터가 있으면 그 `EVO_PROXY_HOME`을 그대로 쓸 수 있습니다.
 
 ```bash
+export PIP_DEFAULT_TIMEOUT=120  # 느린 네트워크에서 설치 끊김 방지
 export LAB_ARCHIVE="$HOME/AI4Science_archive"
 export KEP_USER="$HOME/kaist_evo_proxy"
 export EVO_PROXY_HOME="${EVO_PROXY_HOME:-$HOME/.cache/kaist-evo-proxy}"
@@ -195,3 +196,7 @@ evo-proxy install-skills
 evo-proxy doctor
 python integrations/evoscientist/run_agent.py --workspace .evo-work --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
 ```
+
+설치 중 ReadTimeoutError가 나면 같은 명령을 다시 실행하세요. 이미 받은 부분은 건너뜁니다. 설치가 완료된 호환 패키지를 재사용하며, 캐시가 없으면 중단된 패키지는 다시 다운로드할 수 있습니다.
+
+If setup times out, rerun it. Compatible installed packages are skipped; an incomplete download may restart with caching disabled.

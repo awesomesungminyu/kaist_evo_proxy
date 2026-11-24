@@ -15,6 +15,7 @@ Use Linux and Python 3.11. The CPU quickstart used about 5 GB of disk. Scored mo
 Get the code with `git clone`. Skip the Release page’s **Source code (zip/tar.gz)** files. The commands below fetch the data from the Release.
 
 ```bash
+export PIP_DEFAULT_TIMEOUT=120  # 느린 네트워크에서 설치 끊김 방지
 git clone https://github.com/awesomesungminyu/kaist_evo_proxy.git && cd kaist_evo_proxy  # Get the code and enter its directory
 python3.11 -m venv .venv  # Create a Python environment
 source .venv/bin/activate  # Activate the environment
@@ -163,3 +164,5 @@ Resource measurements use serial seed 0 training. Mamba uses the frozen loop imp
 `evo-proxy setup` installs the pinned [evaluation harness B](https://github.com/awesomesungminyu/KAIST-Intern-Proxy-Task-Bench) for you. The [candidate example](examples/candidate_mixer.py) follows the `CandidateMixer(d_model, num_heads, l_max)` contract.
 
 Cite **KAIST Evo Proxy**, the repository URL and commit, and the relevant sources in [Data licenses and citations](DATA_LICENSES.md). Ask questions in [GitHub Issues](https://github.com/awesomesungminyu/kaist_evo_proxy/issues).
+
+If installation raises ReadTimeoutError, rerun the same command. Compatible installed packages are skipped. An interrupted package download may restart when caching is disabled.
