@@ -4,6 +4,7 @@ import os
 import shutil
 import tarfile
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import gdown
@@ -107,6 +108,48 @@ RELEASE_PAGE = 'https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag
 RELEASE_URL = RELEASE_PAGE.replace('/tag/', '/download/') + '/' + BUNDLE['name']
 
 
+def write_response(response, output, expected):
+    received = 0
+    for chunk in response.iter_content(chunk_size=1024 * 1024):
+        received += len(chunk)
+        if received > expected:
+            raise ValueError('GitHub Release response exceeds expected size')
+        output.write(chunk)
+    if received != expected:
+        raise ValueError('GitHub Release response is incomplete')
+
+
+def download_asset(url, path, size):
+    """Use bounded range requests when the server supports them."""
+    timeout = (15, 60)
+    with requests.get(url, headers={'Range': 'bytes=0-0'}, stream=True, timeout=timeout) as response:
+        response.raise_for_status()
+        if response.status_code == 200:
+            with path.open('wb') as output:
+                write_response(response, output, size)
+            return
+        if response.status_code != 206 or response.headers.get('Content-Range') != f'bytes 0-0/{size}':
+            raise ValueError('Unexpected GitHub Release range response')
+    with path.open('wb') as output:
+        output.truncate(size)
+    segment = 32 * 1024 * 1024
+
+    def fetch_segment(start):
+        stop = min(start + segment, size) - 1
+        span = f'{start}-{stop}'
+        with requests.get(url, headers={'Range': f'bytes={span}'}, stream=True, timeout=timeout) as response:
+            response.raise_for_status()
+            if response.status_code != 206 or response.headers.get('Content-Range') != f'bytes {span}/{size}':
+                raise ValueError('Unexpected GitHub Release range response')
+            with path.open('r+b') as output:
+                output.seek(start)
+                write_response(response, output, stop - start + 1)
+
+    with ThreadPoolExecutor(max_workers=8) as workers:
+        for _ in workers.map(fetch_segment, range(0, size, segment)):
+            pass
+
+
 def fetch_release(destination):
     destination.mkdir(parents=True, exist_ok=True)
     target = destination / BUNDLE['name']
@@ -117,15 +160,7 @@ def fetch_release(destination):
     url = os.getenv('EVO_PROXY_RELEASE_URL', RELEASE_URL)
     with tempfile.TemporaryDirectory(dir=destination) as staging:
         path = Path(staging) / target.name
-        with requests.get(url, stream=True, timeout=(15, 60)) as response:
-            response.raise_for_status()
-            size = 0
-            with path.open('wb') as output:
-                for chunk in response.iter_content(chunk_size=1024 * 1024):
-                    size += len(chunk)
-                    if size > BUNDLE['size']:
-                        raise ValueError(f'{target.name}: response exceeds expected size')
-                    output.write(chunk)
+        download_asset(url, path, BUNDLE['size'])
         verify(path, BUNDLE)
         path.replace(target)
     print(f'Verified GitHub Release bundle: {target.name} ({BUNDLE["size"]} bytes)', flush=True)
