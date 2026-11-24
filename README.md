@@ -56,6 +56,8 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 자원: Transformer 대비 GPU 시간 —, 최대 VRAM —, 파라미터(블록) ×1.00
 ```
 
+데이터를 받기 전에도 `evo-proxy check examples/candidate_mixer.py`로 계약을 검사할 수 있습니다. 데이터 의존 검증은 준비 후 확인하며 eval에는 데이터가 필요합니다.
+
 ### EvoScientist 연결
 
 1. 연구실 EvoScientist와 평가 도구를 별도 가상환경에 준비합니다.
@@ -166,3 +168,5 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 이 도구를 인용할 때는 **KAIST Evo Proxy**, 저장소 주소와 사용한 커밋, [데이터 출처와 인용](DATA_LICENSES.md)을 적어주세요. 문의는 [GitHub Issues](https://github.com/awesomesungminyu/kaist_evo_proxy/issues)에 남겨주세요.
 
 설치 중 ReadTimeoutError가 나면 같은 명령을 다시 실행하세요. 이미 받은 부분은 건너뜁니다. 호환 버전으로 설치가 끝난 패키지를 건너뛰며, 캐시를 끈 상태에서 중단된 패키지의 다운로드는 다시 시작될 수 있습니다.
+
+검증된 기본 모델은 EvoScientist 0.4.4의 `deepseek-v4-flash`입니다. 모델별 실측 시간과 호출 수는 연결 가이드에서 확인하세요.

@@ -8,7 +8,19 @@
 
 [AI4Science_archive의 EvoScientist 설치 안내](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist)를 따르세요. 이 절차는 **EvoScientist 0.4.4**와 `deepseek-v4-flash`에서 검증했습니다. 연구실 `.venv-evoscientist`와 하니스용 `.venv`는 분리합니다. 연구실의 `evoscientist/.env`에 endpoint와 키를 준비하고, EvoSci의 provider를 `custom-openai`로 설정합니다.
 
+기본 모델 설정: `.venv-evoscientist/bin/EvoSci config set model deepseek-v4-flash`.
+
 설치된 EvoScientist 버전이 검증 버전과 다르면 연구실 저장소 루트에서 `.venv-evoscientist/bin/pip install EvoScientist==0.4.4`를 실행하세요.
+
+### 검증 모델
+
+EvoScientist 0.4.4, provider `custom-openai`, CPU MAD smoke의 실측입니다. 1200초 검증 한도를 적용했으며, 호출 수는 동일 모델로 전달하는 로컬 계수 게이트웨이에서 측정했습니다. 기본 예시는 완료 후 30초 안에 종료한 모델 중 이 시험에서 가장 빨랐던 모델입니다. 네트워크 상태에 따라 달라질 수 있습니다.
+
+| Model | Smoke | Elapsed (s) | Model calls | Exit after eval (s) |
+|---|---|---:|---:|---:|
+| `deepseek-v4.1-flash-local` | OK | 87.323 | 5 | 3.399 |
+| `deepseek-v4.1-flash-local-think` | OK | 81.954 | 5 | 3.626 |
+| `deepseek-v4-flash` | OK | 45.801 | 5 | 2.132 |
 
 ### 1. 하니스 준비
 
@@ -32,6 +44,8 @@ export EVO_PROXY_BIN="$KEP_USER/.venv/bin/evo-proxy"
 ```
 
 작업공간과 하니스의 `skills/`가 같으면 기존 파일을 그대로 사용합니다.
+
+데이터를 받기 전에도 `"$EVO_PROXY_BIN" check examples/candidate_mixer.py`로 인과성·shape·backward·파라미터 계약을 검사할 수 있습니다. 데이터가 필요한 검증은 준비 후 확인으로 표시하며 실제 eval은 데이터를 요구합니다.
 
 ### 2. 연결 확인과 실제 평가
 
@@ -61,7 +75,7 @@ launch_eval smoke "$SMOKE_RUN"
 "$EVO_PROXY_BIN" status "$SMOKE_RUN/eval"
 ```
 
-기본 smoke는 MAD 한 과제입니다. 연결 확인용이며, 다른 단일 과제는 `evo-prompt --profile smoke --task <ID>`로 고릅니다. 에이전트는 eval 종료까지만 기다리고 결과 파일을 열지 않습니다.
+기본 smoke는 MAD 한 과제입니다. 연결 확인용이며, 다른 단일 과제는 `evo-prompt --profile smoke --task <ID>`로 고릅니다. 에이전트는 eval 종료까지만 기다립니다. `EVALUATION_COMPLETE`가 나오면 추가 명령이나 파일 읽기 없이 즉시 종료하며 결과 파일은 사람이 엽니다.
 
 **② 실제 평가 · tier1 또는 full**
 
@@ -108,7 +122,7 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 
 ### 알려진 제한
 
-Tier·full 에이전트 실행은 모델 게이트웨이 장애로 검증을 마치지 못했으며, GPU 완주 점수는 측정하지 않았습니다.
+연결 smoke는 위 모델에서 검증했으며, tier·full GPU 완주는 별도로 확인해야 합니다.
 
 ## English
 
@@ -116,11 +130,25 @@ Tier·full 에이전트 실행은 모델 게이트웨이 장애로 검증을 마
 
 Follow the [AI4Science_archive setup](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist). This guide was verified with **EvoScientist 0.4.4** and `deepseek-v4-flash`. Keep the lab and evaluator virtual environments separate. Configure `custom-openai` and put the endpoint and key in the lab checkout's `evoscientist/.env`.
 
+Set the default model with `.venv-evoscientist/bin/EvoSci config set model deepseek-v4-flash`.
+
 If your EvoScientist version differs, run `.venv-evoscientist/bin/pip install EvoScientist==0.4.4` from the lab repository root.
+
+### Verified models
+
+Measured with EvoScientist 0.4.4, `custom-openai`, CPU MAD smoke and a 1200-second verification limit. Calls were counted by a local forwarding gateway using the same model ID. The default is the fastest tested model that completed and exited within 30 seconds after eval; latency can vary.
+
+| Model | Smoke | Elapsed (s) | Model calls | Exit after eval (s) |
+|---|---|---:|---:|---:|
+| `deepseek-v4.1-flash-local` | OK | 87.323 | 5 | 3.399 |
+| `deepseek-v4.1-flash-local-think` | OK | 81.954 | 5 | 3.626 |
+| `deepseek-v4-flash` | OK | 45.801 | 5 | 2.132 |
 
 ### 1. Prepare the evaluator
 
-Run the [setup block above](#1-하니스-준비) with your absolute paths. It keeps the evaluator and data at `$HOME/.cache/kaist-evo-proxy` by default. Use the commented CPU-only export only for a connection check on a machine without a GPU. The two existing skills are left in place when the requested destination is the harness workspace itself.
+Run the [setup block above](#1-하니스-준비) with your absolute paths. The evaluator lives at `$KEP_USER`; downloaded data defaults to `$HOME/.cache/kaist-evo-proxy`. Use the commented CPU-only export only for a connection check on a machine without a GPU. The two existing skills are left in place when the requested destination is the harness workspace itself.
+
+Before downloading data, `"$EVO_PROXY_BIN" check examples/candidate_mixer.py` checks causality, shape, backward and parameters. Dataset-dependent checks are marked deferred; evaluation still requires prepared data.
 
 ### 2. Connection check and scored evaluation
 
@@ -134,7 +162,7 @@ launch_eval smoke "$SMOKE_RUN"
 "$EVO_PROXY_BIN" status "$SMOKE_RUN/eval"
 ```
 
-MAD is the default. To select a different single task, generate a prompt with `--profile smoke --task <ID>`. The agent waits for eval to finish and leaves result files for you.
+MAD is the default. To select a different single task, generate a prompt with `--profile smoke --task <ID>`. After `EVALUATION_COMPLETE`, the agent must immediately end without another command or file read. Result files are left for you.
 
 **② Scored evaluation · tier1 or full**
 
@@ -181,7 +209,7 @@ Session and memory files normally live in `~/.evoscientist/`. Settings are in `~
 
 ### Known limitations
 
-A model gateway outage prevented end-to-end tier and full agent verification. Completed GPU scores were not measured.
+Connection smoke is verified with the models above. GPU completion of tier and full runs requires separate verification.
 
 ### Standalone launcher
 
