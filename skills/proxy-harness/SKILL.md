@@ -1,17 +1,15 @@
 ---
 name: proxy-harness
-description: Evaluate a causal mixer with evo-proxy and read separate Tier 1 and Tier 2 results.
+description: Check and evaluate one causal mixer with evo-proxy, then stop.
 ---
 
-Write a single candidate Python file, then run:
+Write one candidate Python file. Run `evo-proxy check candidate.py` and
+use only its printed contract errors when revising. Check at most three
+distinct versions. If check passes, run the evaluation specified in the
+request and then stop. Leave result.md and the JSON reports for the human.
+Do not read evaluation output files or design another candidate from them.
 
-```sh
-evo-proxy eval candidate.py --profile smoke --out runs/candidate
-```
-
-Read the output path printed by the command and open its `feedback.md`.
-Smoke checks one update per task on CPU and provides no performance score.
+Smoke runs one CPU update per task and provides no performance score.
 Tier 1 tests synthetic capabilities. Tier 2 measures dataset performance.
-Use tier1 or tier2 to isolate a tier, cascade to require the Tier 1 relaxed
-gate before Tier 2, and full for all tasks. Those four scored profiles
-run the frozen seed 0 workload and use CUDA. Keep comparisons within a tier.
+The scored profiles run the frozen seed 0 CUDA workload. Keep comparisons
+within a tier.

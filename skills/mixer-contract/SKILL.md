@@ -21,5 +21,5 @@ seeds as defined by the harness.
 | Parity and Tomita 5, d32 / 2 layers / 4 heads | 11,840 | 10,656–13,024 |
 
 First write the file, then run `evo-proxy check candidate.py --out runs/check`.
-Read the generated feedback.md on failure before trying a new revision.
+On failure, use the printed contract errors before trying a new revision.
 Run `evo-proxy eval` only after a passing check.

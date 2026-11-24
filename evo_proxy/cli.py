@@ -10,12 +10,12 @@ import sys
 from . import harness as h
 from .attempts import attempt
 from .precheck import format_precheck
-from .feedback import make_feedback
 from .judge import REFERENCE, compare, judge
-from .resources import measure, wait_idle
+from .resources import measure, query, wait_idle
+from .result import load_baseline, write_result
 
 PROFILES = ('smoke','tier1','tier2','cascade','full')
-SKILLS = ('proxy-harness','mixer-contract','feedback')
+SKILLS = ('proxy-harness','mixer-contract')
 
 
 def install_skills(destination):
@@ -141,8 +141,18 @@ def checked(candidate, target, command, gpu=False):
     return result
 
 
-def evaluate(candidate, profile, out, only=None):
+def hardware(profile):
+    try:
+        gpus = [dict(name=name, vram_mib=int(memory))
+                for name, memory in query('gpu', 'name,memory.total')]
+    except (OSError, ValueError, subprocess.SubprocessError):
+        gpus = []
+    return dict(device='CPU (smoke)' if profile == 'smoke' else 'CUDA', gpus=gpus)
+
+
+def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_model=None):
     target = h.new_output(out)
+    baseline_path, _ = load_baseline(target.resolve(), {'profile': profile}, baseline_run)
     ok,check,extra = checked(candidate,target,'eval')
     config=h.read(h.ROOT/'tasks/tasks.json')
     tasks=ordered_tasks(profile,config)
@@ -159,13 +169,17 @@ def evaluate(candidate, profile, out, only=None):
                 gate_passed=gate,stop_reason=stop,
                 tasks=[rows.get(t['id'],dict(task=t['id'],tier=t['tier'],name=t['name'],
                                              mean=None,status='not_run')) for t in tasks])
+    reference = h.read(REFERENCE)['tasks']
+    report.update(baseline_model=baseline_model, hardware=hardware(profile),
+                  resource_baseline=str(baseline_path) if baseline_path else None,
+                  score_reference={row['task']: reference[row['task']] for row in report['tasks']})
     if not ok:
-        report['precheck_feedback'] = format_precheck(check,extra)
+        report['precheck_diagnostics'] = format_precheck(check,extra)
     judged=judge(report,config['tasks'])
     h.save(target/'report.json',report)
     h.save(target/'judged.json',judged)
     h.save(target/'resources.json',costs)
-    (target/'feedback.md').write_text(make_feedback(report,judged,costs,precheck=report.get('precheck_feedback')),encoding='utf-8')
+    write_result(target, baseline_path)
     print(f'Output: {target}')
     return int(stop not in ('completed','tier1_two_below_threshold'))
 
@@ -188,7 +202,11 @@ def main(argv=None):
     check.add_argument('mixer',type=Path)
     check.add_argument('--out',type=Path,default=Path('runs/precheck'))
     check.add_argument('--gpu-benchmark',action='store_true',help='Also probe maximum-length GPU memory on the official tasks')
-    ev=actions.add_parser('eval',help='Evaluate a candidate and create reports and feedback')
+    rebuild = actions.add_parser('report', help='Rebuild result.md from saved evaluation JSON')
+    rebuild.add_argument('run', type=Path)
+    rebuild.add_argument('--baseline-run', type=Path)
+    ev=actions.add_parser('eval',help='Evaluate a candidate and write result.md')
+    ev.add_argument('--baseline-run', type=Path)
     ev.add_argument('mixer',type=Path)
     base=actions.add_parser('baseline',help='Run a named reference mixer')
     names=sorted(p.stem for p in (h.ROOT/'baselines/mixers').glob('*.py'))
@@ -205,6 +223,9 @@ def main(argv=None):
             return 0
         if args.command=='install-skills':
             install_skills(args.destination)
+            return 0
+        if args.command=='report':
+            print(write_result(args.run, args.baseline_run))
             return 0
         if not h.installed():
             raise ValueError('The evaluator does not match the pin; run evo-proxy setup with a clean install directory')
@@ -224,15 +245,14 @@ def main(argv=None):
         if args.command=='check':
             target=h.new_output(args.out)
             ok,check,extra=checked(args.mixer.resolve(),target,'check',args.gpu_benchmark)
-            feedback = format_precheck(check,extra)
-            (target/'feedback.md').write_text(feedback,encoding='utf-8')
-            print(f'Precheck: {"passed" if ok else "failed"} ({target / "feedback.md"})')
-            print(feedback)
+            print(f'Precheck: {"passed" if ok else "failed"}')
+            print(format_precheck(check,extra))
             return int(not ok)
         candidate = args.mixer.resolve() if args.command=='eval' else h.ROOT/'baselines/mixers'/f'{args.name}.py'
         if args.task and args.profile!='smoke':
             parser.error('--task requires --profile smoke')
-        return evaluate(candidate,args.profile,args.out,args.task)
+        return evaluate(candidate,args.profile,args.out,args.task,
+                        getattr(args,'baseline_run',None), args.name if args.command=='baseline' else None)
     except (OSError,ValueError,subprocess.SubprocessError) as error:
         parser.exit(1,f'evo-proxy: {error}\n')
 
