@@ -168,3 +168,5 @@ Cite **KAIST Evo Proxy**, the repository URL and commit, and the relevant source
 If installation raises ReadTimeoutError, rerun the same command. Compatible installed packages are skipped. An interrupted package download may restart when caching is disabled.
 
 You can run `evo-proxy check examples/candidate_mixer.py` before downloading data. Dataset-dependent checks are deferred; evaluation still requires prepared data.
+
+The verified default is `deepseek-v4-flash` with EvoScientist 0.4.4. The connection guide lists measured model timings and call counts.
