@@ -219,9 +219,8 @@ def main(argv=None):
                     from .drive import prepare_bundle
                     return prepare_bundle(source)
                 return h.prepare(source)
-            from .drive import fetch
-            destination = args.dest.resolve()
-            return h.prepare(destination, fetch(destination, args.tasks))
+            from .drive import download_and_prepare
+            return download_and_prepare(args.dest.resolve(), args.tasks)
         if args.command=='check':
             target=h.new_output(args.out)
             ok,check,extra=checked(args.mixer.resolve(),target,'check',args.gpu_benchmark)

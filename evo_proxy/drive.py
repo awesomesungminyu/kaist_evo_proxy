@@ -1,10 +1,13 @@
-"""Fetch and verify public Drive archives for the selected tasks."""
+"""Fetch and verify GitHub Release and Drive archives for the selected tasks."""
 import hashlib
+import os
+import shutil
 import tarfile
 import tempfile
 from pathlib import Path
 
 import gdown
+import requests
 from requests import RequestException
 
 from . import harness
@@ -15,8 +18,7 @@ def checksum(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def fetch(destination, selectors):
-    manifest = harness.read(Path(__file__).with_name('drive_manifest.json'))
+def select_tasks(selectors):
     tasks = harness.read(harness.ROOT / 'tasks/tasks.json')['tasks']
     ids = {task['id'] for task in tasks}
     selected = set()
@@ -30,6 +32,11 @@ def fetch(destination, selectors):
                 selected.add(selector)
             else:
                 raise ValueError(f'Unknown task: {selector}')
+    return selected
+
+
+def fetch(destination, selected):
+    manifest = harness.read(Path(__file__).with_name('drive_manifest.json'))
     destination.mkdir(parents=True, exist_ok=True)
     archives = [item for item in manifest['archives'] if not item['optional'] and selected.intersection(item['tasks'])]
     for item in archives:
@@ -65,10 +72,8 @@ def verify(path, item):
         raise ValueError(f'{item["name"]}: size or SHA-256 mismatch')
 
 
-def prepare_bundle(source):
+def prepare_bundle(source, selected=None):
     """Stage a local outer TAR and verify every nested archive before preparation."""
-    import shutil
-
     manifest = harness.read(Path(__file__).with_name('drive_manifest.json'))
     archives = [item for item in manifest['archives'] if not item['optional']]
     name_set = {item['name'] for item in archives} | {'README.txt', 'SHA256SUMS_all.txt'}
@@ -90,4 +95,53 @@ def prepare_bundle(source):
         for item in archives:
             with tarfile.open(directory / item['name'], 'r:gz') as archive:
                 archive.extractall(directory, filter='data')
-        return harness.prepare(directory)
+        return harness.prepare(directory, selected)
+
+
+BUNDLE = {
+    'name': 'proxy-task-bench-data_20261124.tar',
+    'size': 881797120,
+    'sha256': '6b74b5ec8f0132457d8ff053d7a83e4adbf5db37ea6ac812aa253dbe70c777a9',
+}
+RELEASE_PAGE = 'https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124'
+RELEASE_URL = RELEASE_PAGE.replace('/tag/', '/download/') + '/' + BUNDLE['name']
+
+
+def fetch_release(destination):
+    destination.mkdir(parents=True, exist_ok=True)
+    target = destination / BUNDLE['name']
+    if target.is_file():
+        verify(target, BUNDLE)
+        print(f'Using verified cached bundle: {target.name}', flush=True)
+        return target
+    url = os.getenv('EVO_PROXY_RELEASE_URL', RELEASE_URL)
+    with tempfile.TemporaryDirectory(dir=destination) as staging:
+        path = Path(staging) / target.name
+        with requests.get(url, stream=True, timeout=(15, 60)) as response:
+            response.raise_for_status()
+            size = 0
+            with path.open('wb') as output:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    size += len(chunk)
+                    if size > BUNDLE['size']:
+                        raise ValueError(f'{target.name}: response exceeds expected size')
+                    output.write(chunk)
+        verify(path, BUNDLE)
+        path.replace(target)
+    print(f'Verified GitHub Release bundle: {target.name} ({BUNDLE["size"]} bytes)', flush=True)
+    return target
+
+
+def download_and_prepare(destination, selectors):
+    selected = select_tasks(selectors)
+    try:
+        archive = fetch_release(destination)
+    except (RequestException, ValueError, OSError):
+        print(f'{BUNDLE["name"]}: GitHub Release download or verification failed. Trying Drive.', flush=True)
+        try:
+            fetch(destination, selected)
+        except (ValueError, OSError, tarfile.TarError) as error:
+            folder = harness.read(Path(__file__).with_name('drive_manifest.json'))['folder']
+            raise ValueError(f'{error}. Manual downloads: {RELEASE_PAGE} or {folder}') from error
+        return harness.prepare(destination, selected)
+    return prepare_bundle(archive, selected)
