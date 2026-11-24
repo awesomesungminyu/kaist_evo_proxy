@@ -209,7 +209,12 @@ def agent_prompt(profile, task, out):
         finish = 'Wait for the eval command to finish, then end the session.'
     else:
         evaluation += ' --background'
-        header = f'Scored evaluation: {profile}.\n\n'
+        header = (f'Scored evaluation: {profile}.\n'
+                  'Start with a mixer containing only two bias-free projections: '
+                  'd_model to 3*d_model for QKV and d_model to d_model for output, with causal SDPA. '
+                  'Use the provided num_heads to reshape. The harness supplies the blocks, MLP, '
+                  'normalization, and residual path. Do not inspect or add those components. '
+                  'If check fails, use its printed errors and rewrite the mixer directly.\n\n')
         finish = ('Wait for the eval launch command to return its PID and output path, then end the session. '
                   'Leave the detached evaluation running. Do not poll it; the human checks status and reports.')
     template = (h.ROOT / 'examples/research_request.md').read_text(encoding='utf-8')
