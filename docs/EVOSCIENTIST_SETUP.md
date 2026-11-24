@@ -6,72 +6,77 @@
 
 ### 0. 연구실 설치
 
-[연구실 AI4Science_archive의 EvoScientist 안내](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist)를 따르세요. 이 절차는 연구실의 `evoscientist/setup.sh`로 설치한 **EvoScientist 0.4.4**에서 확인했습니다.
+[AI4Science_archive의 EvoScientist 설치 안내](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist)를 따르세요. 이 절차는 **EvoScientist 0.4.4**와 `deepseek-v4-flash`에서 검증했습니다. 연구실 `.venv-evoscientist`와 하니스용 `.venv`는 분리합니다. 연구실의 `evoscientist/.env`에 endpoint와 키를 준비하고, EvoSci의 provider를 `custom-openai`로 설정합니다.
 
-- 연구실 설치 스크립트가 만든 `.venv-evoscientist/bin/EvoSci`를 사용할 수 있어야 합니다.
-- 연구실 저장소의 `evoscientist/.env`에 `CUSTOM_OPENAI_BASE_URL`과 `CUSTOM_OPENAI_API_KEY`를 설정하세요. `custom-openai` provider와 사용할 모델을 지정합니다. 검증 모델은 `deepseek-v4-flash`였습니다.
-- 평가 도구의 `.venv`는 연구실 `.venv-evoscientist`와 분리하세요. 연구실의 다른 프레임워크는 호환되지 않는 LangGraph 버전을 사용합니다. 하니스는 아래에서 별도 가상환경으로 실행합니다.
+### 1. 하니스 준비
 
-### 1. 평가 도구 준비
-
-다음 두 절대경로를 실제 위치로 바꾸세요. 앞서 빠른 시작을 마쳤다면 준비된 하니스의 `EVO_PROXY_HOME`을 그대로 쓰고 `doctor --core`만 확인해도 됩니다.
+경로를 실제 위치로 바꾸세요. 이미 준비한 데이터가 있으면 그 `EVO_PROXY_HOME`을 그대로 쓸 수 있습니다.
 
 ```bash
 export LAB_ARCHIVE="$HOME/AI4Science_archive"
 export KEP_USER="$HOME/kaist_evo_proxy"
-export EVO_PROXY_HOME="$KEP_USER/.kep-data"
-export EVO_PROXY_CPU=1
+export EVO_PROXY_HOME="${EVO_PROXY_HOME:-$HOME/.cache/kaist-evo-proxy}"
+# export EVO_PROXY_CPU=1  # GPU 없는 컴퓨터에서 연결만 확인할 때만
 git clone https://github.com/awesomesungminyu/kaist_evo_proxy.git "$KEP_USER"
 cd "$KEP_USER"
 python3.11 -m venv .venv
 .venv/bin/pip install -e .
 export EVO_PROXY_BIN="$KEP_USER/.venv/bin/evo-proxy"
 "$EVO_PROXY_BIN" setup
-"$EVO_PROXY_BIN" data --download
+"$EVO_PROXY_BIN" data --download --dest "$EVO_PROXY_HOME/incoming"
 "$EVO_PROXY_BIN" doctor --core
+"$EVO_PROXY_BIN" install-skills --evo-workspace "$KEP_USER"
 ```
 
-### 2. 연결 세 단계
+작업공간과 하니스의 `skills/`가 같으면 기존 파일을 그대로 사용합니다.
 
-1. 작업공간에 skill 두 개를 설치합니다. 설치 위치는 `$KEP_USER/skills/`입니다.
+### 2. 연결 확인과 실제 평가
 
-   ```bash
-   "$EVO_PROXY_BIN" install-skills --evo-workspace "$KEP_USER"
-   ```
+현재 셸에 다음 실행 함수를 정의하세요. EvoSci 실행은 하니스 작업공간 격리를 유지합니다.
 
-2. 절대경로 실행 명령과 결과 폴더가 담긴 단발 프롬프트를 생성합니다. 모델 호출은 이 단계에서 일어나지 않습니다.
-
-   ```bash
-   "$EVO_PROXY_BIN" evo-prompt --out runs/kep_eval > "$KEP_USER/kep_prompt.md"
-   ```
-
-3. 연구실 `evoscientist/`에서 환경값을 불러온 뒤 실행합니다. 검증 당시 0.4.4는 파일이 옆에 있어도 셸에 값을 내보내기 전에는 provider 설정을 읽지 못했습니다.
-
-   ```bash
-   cd "$LAB_ARCHIVE/evoscientist"
-   (
-     set -a
-     source ./.env
-     set +a
-     export EVO_PROXY_MAX_ATTEMPTS=3
-     export EVO_PROXY_ATTEMPT_LOG="$KEP_USER/runs/.kep-attempts-$(date +%s).json"
-     ../.venv-evoscientist/bin/EvoSci --workdir "$KEP_USER" --auto-mode --output-format stream-json --prompt-file "$KEP_USER/kep_prompt.md"
-   )
-   ```
-
-`--workdir`는 하니스 폴더를 가상 작업공간의 루트로 지정합니다. 별도 `--mode run` 세션에서는 세션 밖의 하니스 실행 경로가 세션 안의 가상 경로로 해석돼 실행되지 않았습니다. 기본 연결에 `--dangerous`는 필요하지 않습니다. 이 옵션은 실제 호스트 파일시스템 접근을 허용하므로 위 명령에는 추가하지 마세요.
-
-### 3. 정상 실행
-
-아래는 실제 도구 출력에서 발췌했습니다.
-
-```text
-Precheck: passed
-T1-R1-05: done
-Output: /tmp/kep_user/runs/kep_eval
+```bash
+launch_eval() (
+  profile="$1"
+  run_dir="$2"
+  cd "$LAB_ARCHIVE/evoscientist"
+  set -a
+  source ./.env
+  set +a
+  export EVO_PROXY_MAX_ATTEMPTS=3
+  export EVO_PROXY_ATTEMPT_LOG="$run_dir/attempts.json"
+  "$EVO_PROXY_BIN" evo-prompt --profile "$profile" --out "${run_dir#"$KEP_USER"/}/eval" > "$run_dir/kep_prompt.md"
+  ../.venv-evoscientist/bin/EvoSci --workdir "$KEP_USER" --auto-mode --output-format stream-json --prompt-file "$run_dir/kep_prompt.md"
+)
+mkdir -p "$KEP_USER/runs"
 ```
 
-후보는 `$KEP_USER/candidate_mixer.py`에, 결과는 `$KEP_USER/runs/kep_eval/`의 `result.md`, `report.json`, `judged.json`, `resources.json`에 생성됩니다. 에이전트는 평가 명령 뒤 종료합니다. 계약 검사 오류가 있을 때만 최대 세 후보 버전까지 수정합니다.
+**① 연결 확인 · smoke · 보통 약 1분**
+
+```bash
+SMOKE_RUN=$(mktemp -d "$KEP_USER/runs/kep_smoke_XXXXXX")
+launch_eval smoke "$SMOKE_RUN"
+"$EVO_PROXY_BIN" status "$SMOKE_RUN/eval"
+```
+
+기본 smoke는 MAD 한 과제입니다. 연결 확인용이며, 다른 단일 과제는 `evo-prompt --profile smoke --task <ID>`로 고릅니다. 에이전트는 eval 종료까지만 기다리고 결과 파일을 열지 않습니다.
+
+**② 실제 평가 · tier1 또는 full**
+
+CUDA Torch를 설치한 환경을 사용하세요. Tier 1은 기존 Transformer v4 실행에서 약 40분이었고, full은 수십 분 이상 걸릴 수 있습니다. 모델과 GPU 대기 시간에 따라 달라집니다. 아래 `tier1` 대신 `tier2`, `cascade`, `full`도 사용할 수 있습니다.
+
+```bash
+SCORED_RUN=$(mktemp -d "$KEP_USER/runs/kep_scored_XXXXXX")
+launch_eval tier1 "$SCORED_RUN"
+"$EVO_PROXY_BIN" status "$SCORED_RUN/eval"
+```
+
+0.4.4 셸 도구의 기본 제한은 300초입니다. 채점 모드에서는 에이전트가 분리 실행의 PID와 출력 경로를 받은 뒤 종료합니다. `status`는 `precheck`, `waiting_for_gpu`, `running`, `done` 등의 상태를 표시합니다. 완료 후 `"$EVO_PROXY_BIN" report "$SCORED_RUN/eval"`로 표를 다시 만들 수 있습니다. 자세한 실행 기록은 `eval/run.log`에 있습니다.
+
+매 실행은 고유한 `runs/<이름>/`를 만들며 그 아래에 후보, 프롬프트, 계약 검사, `eval/` 결과가 쌓입니다.
+
+### 3. 결과 예시
+
+Smoke는 결과 파일 생성과 실행 상태를 확인합니다. Transformer 대비 성능 점수와 GPU 비용은 비어 있습니다.
 
 ```text
 Tier 1: 0/8 통과 (strict 미확인, relaxed 미확인)
@@ -79,81 +84,66 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 자원: 기준 실행 없음 — `evo-proxy baseline transformer --profile smoke` 를 먼저 실행
 ```
 
-### 4. 결과표 읽기
+다음은 **예시**입니다. 이전 Transformer v4 GPU 기록으로 렌더링한 Tier 1 표의 MAD 행입니다. 이번 연결 테스트에서 새로 측정한 점수는 아닙니다.
 
-`×1.00`은 Transformer 기준과 같습니다. `×0.80` 이상이면 과제 통과입니다. ↓ 지표는 기준 점수 ÷ 후보 점수로 계산합니다. 위 smoke는 설치와 실행 확인용이어서 점수와 GPU 비용을 비워 둡니다.
+| 과제 | 지표(↑/↓) | 후보 점수 | Transformer 기준(3시드 평균) | Transformer 대비(×) | 0.8 통과 | GPU 시간(분) 후보/기준 | VRAM(MiB) 후보/기준 |
+|---|---|---:|---:|---:|---|---:|---:|
+| MAD Compression | token_accuracy ↑ | 0.54 | 0.53 | ×1.02 | 통과 | 0.73 / 0.73 | — / — |
 
-### 5. 자주 막히는 곳
+`×1.00`은 Transformer와 같고, `×0.80` 이상은 과제 통과입니다. 낮을수록 좋은 지표의 유지율은 기준 점수 ÷ 후보 점수입니다.
+
+### 4. 자주 막히는 곳
 
 | 증상 | 확인할 것 |
 |---|---|
-| 모델 이름을 넣어도 연결이 안 됨 | `EvoSci config set provider custom-openai`와 `EvoSci config set model <모델>`을 둘 다 지정하세요. |
-| 환경값을 못 읽음 | 연구실 `evoscientist/`에서 위의 `source ./.env`를 실행하세요. |
-| skill이 안 보임 | `--evo-workspace`와 `--workdir`가 같은 절대경로인지 확인하세요. |
-| `evo-proxy`를 찾지 못함 | `EVO_PROXY_BIN`을 하니스의 `.venv/bin/evo-proxy`로 지정하세요. 별도 run 모드 대신 위 `--workdir`를 사용하세요. |
-| Tavily 경고 | 위 단발 평가에는 웹 검색이 필요 없으므로 이 경고는 무시해도 됩니다. |
+| 모델 연결이 안 됨 | 연구실 `evoscientist/`의 `.env`를 위 함수에서 불러오고, provider `custom-openai`와 모델을 둘 다 지정하세요. |
+| skill이나 실행 파일을 찾지 못함 | `--evo-workspace`와 `--workdir`는 하니스 절대경로, `EVO_PROXY_BIN`은 그 안의 `.venv/bin/evo-proxy`를 가리켜야 합니다. |
+| GPU가 바쁨 | `status`로 상태를 보세요. 하니스가 빈 GPU를 기다립니다. |
+| Tavily 경고 | 이 평가에는 웹 검색이 필요 없습니다. |
 
-### 6. 상태가 쌓이는 곳
-
-기본 세션과 메모리는 `~/.evoscientist/`, 설정은 `~/.config/evoscientist/`에 저장됩니다. 평가 산출물은 하니스의 `runs/`에 남습니다. 검증은 별도 HOME에서 진행했습니다.
-
-연구실 환경을 사용하지 않는 경우, 별도 평가 환경에 EvoScientist 0.4.1을 설치하고 [A의 단발 실행기](../integrations/evoscientist/run_agent.py)를 사용할 수 있습니다. [다른 환경용 실행 예시](#standalone-launcher).
+세션과 메모리는 기본적으로 `~/.evoscientist/`, 설정은 `~/.config/evoscientist/`에 남습니다. `--mode run` 대신 위의 격리된 `--workdir`를 사용합니다. 작업공간 밖의 파일에 접근할 필요가 없습니다.
 
 ## English
 
-### 0. Lab installation
+### 0. Install the lab EvoScientist
 
-Follow the [EvoScientist setup in AI4Science_archive](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist). The lab setup script installed **EvoScientist 0.4.4** in this test.
+Follow the [AI4Science_archive setup](https://github.com/UVR-WJCHO/AI4Science_archive/tree/main/evoscientist). This guide was verified with **EvoScientist 0.4.4** and `deepseek-v4-flash`. Keep the lab and evaluator virtual environments separate. Configure `custom-openai` and put the endpoint and key in the lab checkout's `evoscientist/.env`.
 
-- Confirm the lab’s `.venv-evoscientist/bin/EvoSci` runs.
-- Set `CUSTOM_OPENAI_BASE_URL` and `CUSTOM_OPENAI_API_KEY` in the lab checkout’s `evoscientist/.env`. Select provider `custom-openai` and set the model explicitly. We verified `deepseek-v4-flash`.
-- Keep the harness’s `.venv` separate from the lab environment. The lab documents incompatible LangGraph versions across its frameworks. The harness runs in its own interpreter.
+### 1. Prepare the evaluator
 
-### 1. Prepare the harness
+Run the [setup block above](#1-하니스-준비) with your absolute paths. It keeps the evaluator and data at `$HOME/.cache/kaist-evo-proxy` by default. Use the commented CPU-only export only for a connection check on a machine without a GPU. The two existing skills are left in place when the requested destination is the harness workspace itself.
 
-Set the two absolute paths and run the [harness setup commands](#1-평가-도구-준비). If the quickstart is already complete, reuse its `EVO_PROXY_HOME` and confirm `doctor --core` succeeds.
+### 2. Connection check and scored evaluation
 
-### 2. Connect in three steps
+Define [the launch function above](#2-연결-확인과-실제-평가) in your shell.
 
-1. Install both skills inside the harness workspace.
+**① Connection check · smoke · about a minute**
 
-   ```bash
-   "$EVO_PROXY_BIN" install-skills --evo-workspace "$KEP_USER"
-   ```
-
-2. Generate a one-shot request with the absolute executable and output directory. This command does not call the model.
-
-   ```bash
-   "$EVO_PROXY_BIN" evo-prompt --out runs/kep_eval > "$KEP_USER/kep_prompt.md"
-   ```
-
-3. From the lab checkout, load the environment file and start EvoScientist.
-
-   ```bash
-   cd "$LAB_ARCHIVE/evoscientist"
-   (
-     set -a
-     source ./.env
-     set +a
-     export EVO_PROXY_MAX_ATTEMPTS=3
-     export EVO_PROXY_ATTEMPT_LOG="$KEP_USER/runs/.kep-attempts-$(date +%s).json"
-     ../.venv-evoscientist/bin/EvoSci --workdir "$KEP_USER" --auto-mode --output-format stream-json --prompt-file "$KEP_USER/kep_prompt.md"
-   )
-   ```
-
-The explicit workspace keeps path isolation enabled. In per-session `--mode run`, the external executable resolved inside the session folder and was missing. The tested connection uses `--workdir` without `--dangerous`, which would grant real host filesystem access.
-
-### 3. Successful output
-
-Excerpt from the actual tool output.
-
-```text
-Precheck: passed
-T1-R1-05: done
-Output: /tmp/kep_user/runs/kep_eval
+```bash
+SMOKE_RUN=$(mktemp -d "$KEP_USER/runs/kep_smoke_XXXXXX")
+launch_eval smoke "$SMOKE_RUN"
+"$EVO_PROXY_BIN" status "$SMOKE_RUN/eval"
 ```
 
-Look for `candidate_mixer.py` in the harness workspace and `result.md`, `report.json`, `judged.json`, and `resources.json` under `runs/kep_eval/`. The agent stops after eval. It can revise up to three distinct candidate versions using the contract errors printed by check.
+MAD is the default. To select a different single task, generate a prompt with `--profile smoke --task <ID>`. The agent waits for eval to finish and leaves result files for you.
+
+**② Scored evaluation · tier1 or full**
+
+Use an environment with CUDA Torch. Tier 1 took about 40 minutes for the historical Transformer v4 run. Full runs can take tens of minutes or longer. GPU availability and the candidate affect both times. Use `tier1`, `tier2`, `cascade`, or `full`.
+
+```bash
+SCORED_RUN=$(mktemp -d "$KEP_USER/runs/kep_scored_XXXXXX")
+launch_eval tier1 "$SCORED_RUN"
+"$EVO_PROXY_BIN" status "$SCORED_RUN/eval"
+```
+
+The 0.4.4 shell tool has a 300-second default timeout. Scored prompts ask the agent to start a detached evaluation and wait only for the launch response. Use `status` to see whether it is in precheck, waiting for the GPU, running, or done. The log is `eval/run.log`. Once complete, regenerate the table with `"$EVO_PROXY_BIN" report "$SCORED_RUN/eval"`.
+
+Every run creates a unique `runs/<name>/` directory containing the candidate, prompt, contract-check output, and `eval/` results.
+
+### 3. Result examples
+
+Smoke checks execution and result creation. Performance and GPU costs are blank.
 
 ```text
 Tier 1: 0/8 통과 (strict 미확인, relaxed 미확인)
@@ -161,23 +151,24 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 자원: 기준 실행 없음 — `evo-proxy baseline transformer --profile smoke` 를 먼저 실행
 ```
 
-### 4. Read the table
+**Example from historical Transformer v4 GPU results.** This MAD row is from a rendered Tier 1 table, using a past seed-0 score against the existing three-seed reference.
 
-`×1.00` matches Transformer. A retention of at least `×0.80` passes. For ↓ metrics, retention is the reference divided by the candidate. This CPU smoke run leaves performance scores and GPU costs empty.
+| 과제 | 지표(↑/↓) | 후보 점수 | Transformer 기준(3시드 평균) | Transformer 대비(×) | 0.8 통과 | GPU 시간(분) 후보/기준 | VRAM(MiB) 후보/기준 |
+|---|---|---:|---:|---:|---|---:|---:|
+| MAD Compression | token_accuracy ↑ | 0.54 | 0.53 | ×1.02 | 통과 | 0.73 / 0.73 | — / — |
 
-### 5. Troubleshooting
+`×1.00` matches Transformer, and `×0.80` or higher passes the task. For metrics where lower is better, retention is the reference score divided by the candidate score.
+
+### 4. Troubleshooting
 
 | Symptom | What to check |
 |---|---|
-| Wrong provider | Set both `EvoSci config set provider custom-openai` and `EvoSci config set model <model>`. |
-| Credentials unavailable | Run `source ./.env` with the exports shown above from the lab’s `evoscientist/` directory. |
-| Missing skills | Use the same absolute path for `--evo-workspace` and `--workdir`. |
-| Harness executable missing | Point `EVO_PROXY_BIN` to the harness’s `.venv/bin/evo-proxy` and launch with the tested `--workdir`. |
-| Tavily warning | This one-shot evaluation needs no web search. |
+| Wrong provider or missing credentials | Select `custom-openai` and the model. The launch function exports the settings from the lab `evoscientist/.env`. |
+| Skills or executable unavailable | Use the harness path for both `--evo-workspace` and `--workdir`. Set `EVO_PROXY_BIN` to its `.venv/bin/evo-proxy`. |
+| GPU busy | Check `status`. The harness waits for an idle GPU. |
+| Tavily warning | This evaluation does not use web search. |
 
-### 6. State locations
-
-EvoScientist normally writes session and memory state into `~/.evoscientist/` and configuration into `~/.config/evoscientist/`. Evaluation output stays under the harness’s `runs/`. Testing used an isolated HOME.
+Session and memory files normally live in `~/.evoscientist/`. Settings are in `~/.config/evoscientist/`. Use the isolated `--workdir` launch above. The separate session mode roots the shell in its run subdirectory.
 
 ### Standalone launcher
 
