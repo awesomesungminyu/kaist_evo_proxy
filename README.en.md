@@ -11,7 +11,7 @@ Evaluate Transformer alternatives on 18 small proxy tasks. Check a mixer on CPU,
 | Command | What it does |
 |---|---|
 | `evo-proxy setup` | Installs the pinned evaluator and its dependencies. |
-| `evo-proxy data --download` | Downloads and checks the required Drive archives, then prepares the data. |
+| `evo-proxy data --download` | Downloads and checks the GitHub Release bundle, then prepares the data. |
 | `evo-proxy install-skills` | Copies skills into the EvoScientist workspace. |
 | `evo-proxy eval` | Checks and evaluates the candidate and writes feedback. |
 | `evo-proxy doctor` | Checks evaluator, data, EvoScientist and skill readiness. |
@@ -31,7 +31,7 @@ pip install -e .
 evo-proxy setup
 ```
 
-For manual setup, extract the data archives from the [Drive checklist](drive_upload_20261123/README.md) into one `incoming/` folder.
+
 
 ```bash
 evo-proxy data --download
@@ -51,39 +51,13 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
   --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
 ```
 
-### Data selection and manual setup
+### Data
 
-[Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
+`evo-proxy data --download` fetches one GitHub Release file, about 882 MB. Download, verification, and preparation took about 2 minutes in our check. Use `--tasks tier1|tier2|all` or pass task IDs to select tasks.
 
-```bash
-evo-proxy data --download --tasks tier1 --dest incoming
-evo-proxy data --download --tasks T1-R1-05 T2-R4-02
-evo-proxy data --source incoming
-evo-proxy data --source path/to/proxy-task-bench-data_20261124.tar
-```
+For manual setup, download the file from the [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124) and run `evo-proxy data --source proxy-task-bench-data_20261124.tar`. An extracted directory is also supported.
 
-The default archives total 881,766,137 bytes across nine files. The Linux verification took 58 seconds for downloading, checking, extracting, and preparing the data. The original Speech WAV archive is optional. The default path uses the evaluated cache. The November 23 archives take precedence over overlapping October extras.
-
-| Tier | ID | Task | Data | Default archive | Prepared files |
-|---|---|---|---|---|---|
-| 1 | T1-R1-05 | MAD Compression | File | proxy-data-final-pool-mad.tar.gz | inputs.npy |
-| 1 | T1-R0-07 | RegBench | Generated | — | — |
-| 1 | T1-R2-02 | String Matching | Generated | — | — |
-| 1 | T1-R2-01 | Positional Histogram | Generated | — | — |
-| 1 | T1-R2-05 | Random Automaton | Generated | — | — |
-| 1 | T1-R2-04 | Cycle Navigation | Generated | — | — |
-| 1 | T1-R0-04 | Parity | File | proxy-data-final-pool-parity.tar.gz | train_corpus.pk, val_corpus_bins.pk |
-| 1 | T1-R0-05 | Tomita 5 | File | proxy-data-tomita5.tar.gz | train_corpus.pk, val_corpus_bins.pk |
-| 2 | T2-R1-11 | Permuted MNIST | File | proxy-data-final-pool-small.tar.gz | train-images-idx3-ubyte.gz, train-labels-idx1-ubyte.gz |
-| 2 | T2-R3-05 | Permuted Kuzushiji-49 | File | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy |
-| 2 | T2-R4-02 | Speech Commands (raw waveform) | File | proxy-data-speech-cache.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
-| 2 | T2-R3-02 | Permuted EMNIST (letters) | File | proxy-data-emnist.tar.gz | train_x.npy, train_y.npy |
-| 2 | T2-R1-04 | TAPE Stability | File | proxy-data-final-pool-small.tar.gz | train.csv, valid.csv |
-| 2 | T2-R1-09 | enwik8 | File | proxy-data-final-pool-small.tar.gz | enwik8.zip |
-| 2 | T2-R1-08 | IMDB (byte-level) | File | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
-| 2 | T2-R2-02 | Lipophilicity (SMILES) | File | proxy-data-final-pool-small.tar.gz, proxy-data-lipophilicity.tar.gz | Lipophilicity.csv, split.npz |
-| 2 | promoters | Human non-TATA promoter classification | File | proxy-data-promoters.tar.gz | arrays.npz |
-| 2 | bach | DCMLab Bach chorales | File | proxy-data-bach.tar.gz | arrays.npz |
+[Drive fallback mirror](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [Data licenses and citations](DATA_LICENSES.md)
 
 ## EvoScientist loop
 

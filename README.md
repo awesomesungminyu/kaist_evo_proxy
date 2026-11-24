@@ -11,7 +11,7 @@ Transformer 대안 mixer를 가벼운 18개 과제로 평가합니다. 후보를
 | 명령 | 하는 일 |
 |---|---|
 | `evo-proxy setup` | 지정된 평가기와 의존성을 설치합니다. |
-| `evo-proxy data --download` | 필요한 Drive 묶음을 받고 SHA-256을 검사한 뒤 데이터를 준비합니다. |
+| `evo-proxy data --download` | GitHub Release 번들을 받고 SHA-256을 검사한 뒤 데이터를 준비합니다. |
 | `evo-proxy install-skills` | EvoScientist 작업 폴더에 skill을 복사합니다. |
 | `evo-proxy eval` | 후보를 검사하고 평가 결과와 피드백을 씁니다. |
 | `evo-proxy doctor` | 설치, 데이터, EvoScientist와 skill 준비 상태를 확인합니다. |
@@ -31,7 +31,7 @@ pip install -e .
 evo-proxy setup
 ```
 
-[Drive 목록](drive_upload_20261123/README.md)의 데이터 묶음을 같은 `incoming/` 폴더에 풀고 수동 경로를 사용할 수도 있습니다.
+
 
 ```bash
 evo-proxy data --download
@@ -51,39 +51,13 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
   --prompt examples/research_request.md --env-file .env --model YOUR_MODEL
 ```
 
-### 데이터 선택 및 수동 준비
+### 데이터
 
-[Drive](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [archive and task checklist](drive_upload_20261123/README.md)
+`evo-proxy data --download` · GitHub Release 단일 파일, 약 882 MB, 이번 검증에서 약 2분(다운로드·검증·준비 포함). 과제 선택은 `--tasks tier1|tier2|all` 또는 과제 ID 목록으로 지정합니다.
 
-```bash
-evo-proxy data --download --tasks tier1 --dest incoming
-evo-proxy data --download --tasks T1-R1-05 T2-R4-02
-evo-proxy data --source incoming
-evo-proxy data --source path/to/proxy-task-bench-data_20261124.tar
-```
+수동으로는 [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124)에서 파일 1개를 받아 `evo-proxy data --source proxy-task-bench-data_20261124.tar`를 실행합니다. 압축을 푼 디렉터리도 사용할 수 있습니다.
 
-기본 다운로드는 9개 묶음, 881,766,137바이트입니다. 신규 Linux 검증에서 다운로드·검증·압축 해제·준비를 합쳐 58초가 걸렸습니다. Speech의 원본 WAV 묶음은 선택이며, 기본 경로는 평가 캐시를 사용합니다. 이전 extras와 겹치는 자료는 11/23 묶음을 사용합니다.
-
-| Tier | ID | 과제 | 데이터 | 기본 묶음 | 준비 후 파일 |
-|---|---|---|---|---|---|
-| 1 | T1-R1-05 | MAD Compression | 파일 | proxy-data-final-pool-mad.tar.gz | inputs.npy |
-| 1 | T1-R0-07 | RegBench | 생성형 | — | — |
-| 1 | T1-R2-02 | String Matching | 생성형 | — | — |
-| 1 | T1-R2-01 | Positional Histogram | 생성형 | — | — |
-| 1 | T1-R2-05 | Random Automaton | 생성형 | — | — |
-| 1 | T1-R2-04 | Cycle Navigation | 생성형 | — | — |
-| 1 | T1-R0-04 | Parity | 파일 | proxy-data-final-pool-parity.tar.gz | train_corpus.pk, val_corpus_bins.pk |
-| 1 | T1-R0-05 | Tomita 5 | 파일 | proxy-data-tomita5.tar.gz | train_corpus.pk, val_corpus_bins.pk |
-| 2 | T2-R1-11 | Permuted MNIST | 파일 | proxy-data-final-pool-small.tar.gz | train-images-idx3-ubyte.gz, train-labels-idx1-ubyte.gz |
-| 2 | T2-R3-05 | Permuted Kuzushiji-49 | 파일 | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy |
-| 2 | T2-R4-02 | Speech Commands (raw waveform) | 파일 | proxy-data-speech-cache.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
-| 2 | T2-R3-02 | Permuted EMNIST (letters) | 파일 | proxy-data-emnist.tar.gz | train_x.npy, train_y.npy |
-| 2 | T2-R1-04 | TAPE Stability | 파일 | proxy-data-final-pool-small.tar.gz | train.csv, valid.csv |
-| 2 | T2-R1-09 | enwik8 | 파일 | proxy-data-final-pool-small.tar.gz | enwik8.zip |
-| 2 | T2-R1-08 | IMDB (byte-level) | 파일 | proxy-data-final-pool-small.tar.gz | train_x.npy, train_y.npy, val_x.npy, val_y.npy |
-| 2 | T2-R2-02 | Lipophilicity (SMILES) | 파일 | proxy-data-final-pool-small.tar.gz, proxy-data-lipophilicity.tar.gz | Lipophilicity.csv, split.npz |
-| 2 | promoters | Human non-TATA promoter classification | 파일 | proxy-data-promoters.tar.gz | arrays.npz |
-| 2 | bach | DCMLab Bach chorales | 파일 | proxy-data-bach.tar.gz | arrays.npz |
+[Drive 예비 미러](https://drive.google.com/drive/folders/1SceShb6mBJXSaWDNzq6VrOgVajY-4ru0?usp=sharing) · [데이터 라이선스와 인용](DATA_LICENSES.md)
 
 ## EvoScientist 루프
 
