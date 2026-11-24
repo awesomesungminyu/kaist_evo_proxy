@@ -57,20 +57,18 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 
 ### EvoScientist 연결
 
-```bash
-pip install EvoScientist==0.4.1  # 검증한 EvoScientist 버전 설치
-export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"  # 에이전트 작업 폴더 지정
-evo-proxy install-skills  # 계약 검사와 평가 skill 2개 설치
-evo-proxy doctor  # EvoScientist와 skill까지 점검
-```
+1. 연구실 EvoScientist와 평가 도구를 별도 가상환경에 준비합니다.
+2. 하니스 작업공간에 skill을 설치하고 단발 프롬프트를 만듭니다.
+3. 격리를 유지한 채 실행하고, 사람이 `result.md`를 확인합니다.
 
-에이전트를 실행하기 직전에 프로젝트의 로컬 `.env`에 `CUSTOM_OPENAI_API_KEY`와 `CUSTOM_OPENAI_BASE_URL`(HTTPS, `/v1` 끝점)을 넣으세요. 명령의 `YOUR_MODEL`은 제공자의 모델 ID로 바꿉니다.
+[연구실 연결 방법과 다른 환경용 실행기](docs/EVOSCIENTIST_SETUP.md)
 
-```bash
-python integrations/evoscientist/run_agent.py --workspace .evo-work --prompt examples/research_request.md --env-file .env --model YOUR_MODEL  # 후보 하나를 검사·평가
-```
+## 두 가지 사용법
 
-에이전트는 출력된 계약 오류만 보고 최대 세 후보 버전까지 검사합니다. 첫 계약 통과 후 한 번 평가하고 종료합니다. 결과표는 사람이 읽습니다. 기존 skill과 충돌하면 새 작업 폴더에 설치하세요.
+| 사용법 | 시작 방법 |
+|---|---|
+| 평가만 | 준비한 후보를 `evo-proxy check`와 `evo-proxy eval`로 실행합니다. |
+| EvoScientist 자동 후보 생성 | 연구실 연결 안내에서 후보 작성부터 단발 평가까지 실행합니다. |
 
 ## 결과 읽는 법
 

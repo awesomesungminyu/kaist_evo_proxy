@@ -2,7 +2,9 @@
 import argparse
 from importlib.metadata import PackageNotFoundError, version
 import json
+import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -197,7 +199,11 @@ def main(argv=None):
     diagnose=actions.add_parser('doctor',help='Check Torch, CUDA, datasets, EvoScientist and installed skills')
     diagnose.add_argument('--core',action='store_true',help='Only require evaluator readiness')
     skills=actions.add_parser('install-skills',help='Copy skills to <EvoScientist workspace>/skills')
-    skills.add_argument('destination',type=Path,nargs='?',default=h.skills_path())
+    skills.add_argument('destination', type=Path, nargs='?')
+    skills.add_argument('--evo-workspace', type=Path, help='Install under this EvoScientist workspace’s skills directory')
+    prompt = actions.add_parser('evo-prompt', help='Print a one-shot EvoScientist prompt without calling a model')
+    prompt.add_argument('--out', type=Path, default=Path('runs/candidate'),
+                        help='Output directory relative to the agent workspace')
     check=actions.add_parser('check',help='Check one candidate on CPU without training')
     check.add_argument('mixer',type=Path)
     check.add_argument('--out',type=Path,default=Path('runs/precheck'))
@@ -222,7 +228,19 @@ def main(argv=None):
             h.setup()
             return 0
         if args.command=='install-skills':
-            install_skills(args.destination)
+            if args.destination and args.evo_workspace:
+                parser.error('Use a destination or --evo-workspace, not both')
+            destination = args.destination or (args.evo_workspace / 'skills' if args.evo_workspace else h.skills_path())
+            install_skills(destination)
+            return 0
+        if args.command=='evo-prompt':
+            if args.out.is_absolute() or '..' in args.out.parts or not args.out.parts:
+                parser.error('--out must be inside the agent workspace')
+            command = shlex.quote(os.getenv('EVO_PROXY_BIN') or 'evo-proxy')
+            template = (h.ROOT / 'examples/research_request.md').read_text(encoding='utf-8')
+            template = template.replace('evo-proxy check ', f'{command} check ')
+            template = template.replace('evo-proxy eval ', f'{command} eval ')
+            print(template.replace('./runs/candidate', shlex.quote(f'./{args.out.as_posix()}')), end='')
             return 0
         if args.command=='report':
             print(write_result(args.run, args.baseline_run))
