@@ -12,3 +12,6 @@ downloads/
 .venv/
 .evo-work/
 runs/
+
+.kep-data/
+/incoming/

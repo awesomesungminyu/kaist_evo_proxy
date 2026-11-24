@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 from . import harness as h
+from . import jobs
 from .attempts import attempt
 from .precheck import format_precheck
 from .judge import REFERENCE, compare, judge
@@ -26,6 +27,8 @@ def install_skills(destination):
     for name in SKILLS:
         source = h.ROOT/'skills'/name
         target = destination/name
+        if source.resolve() == target.resolve():
+            continue
         if target.exists():
             if (target/'SKILL.md').read_bytes() != (source/'SKILL.md').read_bytes():
                 raise ValueError(f'Existing skill differs at {target}; choose another directory')
@@ -66,7 +69,7 @@ def ordered_tasks(profile,config):
     return sorted(tasks,key=lambda t:(t['tier'],t['id'] in ('T1-R0-04','T1-R0-05')))
 
 
-def run_tasks(candidate, profile, out, tasks, checks):
+def run_tasks(candidate, profile, out, tasks, checks, progress=None):
     smoke = profile=='smoke'
     budget = 'smoke' if smoke else 'full'
     reference = h.read(REFERENCE)['tasks']
@@ -84,11 +87,15 @@ def run_tasks(candidate, profile, out, tasks, checks):
                     stop='tier1_two_below_threshold' if misses>=2 else 'tier1_gate_unconfirmed'
                     break
         if not smoke:
+            if progress:
+                progress('waiting_for_gpu')
             try:
                 wait_idle()
             except TimeoutError:
                 stop='gpu_idle_timeout'
                 break
+        if progress:
+            progress('running')
         folder=out/'observations'/task_id
         folder.mkdir(parents=True)
         mode='cpu' if smoke else 'cuda'
@@ -152,8 +159,8 @@ def hardware(profile):
     return dict(device='CPU (smoke)' if profile == 'smoke' else 'CUDA', gpus=gpus)
 
 
-def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_model=None):
-    target = h.new_output(out)
+def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_model=None, *, target=None, progress=None):
+    target = h.new_output(out) if target is None else target
     baseline_path, _ = load_baseline(target.resolve(), {'profile': profile}, baseline_run)
     ok,check,extra = checked(candidate,target,'eval')
     config=h.read(h.ROOT/'tasks/tasks.json')
@@ -161,8 +168,10 @@ def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_mod
     if only is not None:
         tasks=[task for task in tasks if task['id']==only]
     if ok:
+        if progress and profile != 'smoke':
+            progress('waiting_for_gpu')
         with h.serial_gpu(profile!='smoke'):
-            rows,costs,gate,stop=run_tasks(candidate,profile,target,tasks,check['tasks']|extra)
+            rows,costs,gate,stop=run_tasks(candidate,profile,target,tasks,check['tasks']|extra,progress)
     else:
         rows,costs,gate,stop={}, {}, None, 'precheck_failed'
     report=dict(profile=profile, status='blocked' if not ok else
@@ -186,6 +195,38 @@ def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_mod
     return int(stop not in ('completed','tier1_two_below_threshold'))
 
 
+def agent_prompt(profile, task, out):
+    run = out.parent
+    if not run.is_relative_to('runs') or run == Path('runs'):
+        run = Path('runs') / f'{out.name}-inputs'
+    command = shlex.quote(os.getenv('EVO_PROXY_BIN') or 'evo-proxy')
+    candidate = run / 'candidate_mixer.py'
+    check = f'{command} check {shlex.quote(f"./{candidate}")} --out {shlex.quote(f"./{run}/check")}'
+    evaluation = f'{command} eval {shlex.quote(f"./{candidate}")} --profile {profile}'
+    if profile == 'smoke':
+        evaluation += f' --task {task or "T1-R1-05"}'
+        header = 'Connection check / 연결 확인용: one CPU smoke task.\n\n'
+        finish = 'Wait for the eval command to finish, then end the session.'
+    else:
+        evaluation += ' --background'
+        header = (f'Scored evaluation: {profile}.\n'
+                  'Start with a mixer containing only two bias-free projections: '
+                  'd_model to 3*d_model for QKV and d_model to d_model for output, with causal SDPA. '
+                  'Use the provided num_heads to reshape. The harness supplies the blocks, MLP, '
+                  'normalization, and residual path. Do not inspect or add those components. '
+                  'If check fails, use its printed errors and rewrite the mixer directly.\n\n')
+        finish = ('Wait for the eval launch command to return its PID and output path, then end the session. '
+                  'Leave the detached evaluation running. Do not poll it; the human checks status and reports.')
+    template = (h.ROOT / 'examples/research_request.md').read_text(encoding='utf-8')
+    template = template.removeprefix('Connection check / 연결 확인용: one CPU smoke task.\n\n')
+    template = template.replace('/runs/kep_smoke/candidate_mixer.py immediately', f'/{candidate} immediately')
+    lines = template.splitlines()
+    lines = [check if line.startswith('evo-proxy check ') else
+             evaluation + f' --out {shlex.quote(f"./{out}")}' if line.startswith('evo-proxy eval ') else
+             finish if line.startswith('Wait for the eval command') else line for line in lines]
+    return header + '\n'.join(lines) + '\n'
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(prog='evo-proxy',description=__doc__)
     actions=parser.add_subparsers(dest='command',required=True)
@@ -202,8 +243,11 @@ def main(argv=None):
     skills.add_argument('destination', type=Path, nargs='?')
     skills.add_argument('--evo-workspace', type=Path, help='Install under this EvoScientist workspace’s skills directory')
     prompt = actions.add_parser('evo-prompt', help='Print a one-shot EvoScientist prompt without calling a model')
-    prompt.add_argument('--out', type=Path, default=Path('runs/candidate'),
+    prompt.add_argument('--profile', choices=PROFILES, default='smoke')
+    prompt.add_argument('--out', type=Path,
                         help='Output directory relative to the agent workspace')
+    status = actions.add_parser('status', help='Show a detached evaluation status')
+    status.add_argument('run', type=Path)
     check=actions.add_parser('check',help='Check one candidate on CPU without training')
     check.add_argument('mixer',type=Path)
     check.add_argument('--out',type=Path,default=Path('runs/precheck'))
@@ -213,11 +257,13 @@ def main(argv=None):
     rebuild.add_argument('--baseline-run', type=Path)
     ev=actions.add_parser('eval',help='Evaluate a candidate and write result.md')
     ev.add_argument('--baseline-run', type=Path)
+    ev.add_argument('--background', action='store_true', help='Start a detached scored evaluation')
     ev.add_argument('mixer',type=Path)
     base=actions.add_parser('baseline',help='Run a named reference mixer')
     names=sorted(p.stem for p in (h.ROOT/'baselines/mixers').glob('*.py'))
     base.add_argument('name',choices=names)
     task_ids=[t['id'] for t in h.read(h.ROOT/'tasks/tasks.json')['tasks']]
+    prompt.add_argument('--task', choices=task_ids, help='Select one smoke task (default: MAD)')
     for cmd in (ev,base):
         cmd.add_argument('--task',choices=task_ids,help='Select one task in smoke mode')
         cmd.add_argument('--profile',choices=PROFILES,default='smoke')
@@ -234,14 +280,15 @@ def main(argv=None):
             install_skills(destination)
             return 0
         if args.command=='evo-prompt':
-            if args.out.is_absolute() or '..' in args.out.parts or not args.out.parts:
+            if args.task and args.profile != 'smoke':
+                parser.error('--task requires --profile smoke')
+            out = args.out or Path(f'runs/kep_{args.profile}/eval')
+            if out.is_absolute() or '..' in out.parts or not out.parts:
                 parser.error('--out must be inside the agent workspace')
-            command = shlex.quote(os.getenv('EVO_PROXY_BIN') or 'evo-proxy')
-            template = (h.ROOT / 'examples/research_request.md').read_text(encoding='utf-8')
-            template = template.replace('evo-proxy check ', f'{command} check ')
-            template = template.replace('evo-proxy eval ', f'{command} eval ')
-            print(template.replace('./runs/candidate', shlex.quote(f'./{args.out.as_posix()}')), end='')
+            print(agent_prompt(args.profile, args.task, out), end='')
             return 0
+        if args.command=='status':
+            return jobs.show(args.run)
         if args.command=='report':
             print(write_result(args.run, args.baseline_run))
             return 0
@@ -269,6 +316,10 @@ def main(argv=None):
         candidate = args.mixer.resolve() if args.command=='eval' else h.ROOT/'baselines/mixers'/f'{args.name}.py'
         if args.task and args.profile!='smoke':
             parser.error('--task requires --profile smoke')
+        if args.command == 'eval' and args.background:
+            if args.profile == 'smoke':
+                parser.error('--background is for scored profiles; smoke runs in the foreground')
+            return jobs.start(candidate,args.profile,args.out,args.baseline_run)
         return evaluate(candidate,args.profile,args.out,args.task,
                         getattr(args,'baseline_run',None), args.name if args.command=='baseline' else None)
     except (OSError,ValueError,subprocess.SubprocessError) as error:
