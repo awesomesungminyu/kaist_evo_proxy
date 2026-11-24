@@ -57,20 +57,18 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 
 ### Connect EvoScientist
 
-```bash
-pip install EvoScientist==0.4.1  # Install the verified EvoScientist version
-export EVOSCIENTIST_WORKSPACE_DIR="$PWD/.evo-work"  # Set the agent workspace
-evo-proxy install-skills  # Install the two evaluation skills
-evo-proxy doctor  # Check EvoScientist and the skills
-```
+1. Set up the lab EvoScientist and the harness in separate environments.
+2. Install two skills in the harness workspace and generate the one-shot prompt.
+3. Run EvoScientist with workspace isolation and review `result.md` yourself.
 
-Just before launching the agent, put `CUSTOM_OPENAI_API_KEY` and `CUSTOM_OPENAI_BASE_URL` (an HTTPS `/v1` endpoint) in a local `.env`. Replace `YOUR_MODEL` with the provider’s model ID.
+[Lab setup and the standalone launcher](docs/EVOSCIENTIST_SETUP.md#english)
 
-```bash
-python integrations/evoscientist/run_agent.py --workspace .evo-work --prompt examples/research_request.md --env-file .env --model YOUR_MODEL  # Check and evaluate one candidate
-```
+## Two ways to use it
 
-The agent can use the printed contract errors to check up to three candidate versions. It evaluates once after passing the contract and then stops. A human reads the results. If installed skills conflict, choose a new workspace.
+| Use case | Start here |
+|---|---|
+| Evaluation only | Run `evo-proxy check` and `evo-proxy eval` on your candidate. |
+| Automatic candidate generation | Follow the lab setup to write and evaluate one candidate. |
 
 ## Read the results
 
