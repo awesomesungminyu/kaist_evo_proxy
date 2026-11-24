@@ -10,7 +10,7 @@ EvoScientist 후보 작성 → `evo-proxy check`(계약 검사) → `evo-proxy e
 
 ## 빠른 시작
 
-Linux와 Python 3.11이 필요합니다. CPU 빠른 시작은 디스크 약 @@DISK@@ GB를 사용했습니다. CUDA GPU는 채점용 모드에 필요하며 검증 장비는 TITAN RTX 24 GB입니다. 아래 CPU 예제는 MAD 한 과제만 실행합니다. 처음 설치하거나 네트워크가 느리면 5분보다 오래 걸릴 수 있습니다.
+Linux와 Python 3.11이 필요합니다. CPU 빠른 시작은 디스크 약 5 GB를 사용했습니다. CUDA GPU는 채점용 모드에 필요하며 검증 장비는 TITAN RTX 24 GB입니다. 아래 CPU 예제는 MAD 한 과제만 실행합니다. 처음 설치하거나 네트워크가 느리면 5분보다 오래 걸릴 수 있습니다.
 
 코드는 `git clone`으로 받으세요. Release 페이지의 **Source code (zip/tar.gz)**는 쓰지 않습니다. 데이터는 아래 명령이 Release에서 자동으로 받습니다.
 
@@ -31,13 +31,29 @@ evo-proxy eval examples/candidate_mixer.py --profile smoke --task T1-R1-05 --out
 
 `evo-proxy doctor --core` 출력에서 발췌했습니다. 처음에는 EvoScientist와 skill을 설치하기 전이라 해당 두 항목이 `false`일 수 있습니다.
 
-@@DOCTOR@@
+```json
+{
+  "pinned_harness": true,
+  "formal": true,
+  "retnet": true,
+  "data_18": true,
+  "torch": true,
+  "cuda": "not required (CPU setup)",
+  "nvidia_smi": true,
+  "evoscientist_0_4_1": false,
+  "workspace_skills": true
+}
+```
 
 평가가 끝나면 `runs/example/`에 `result.md`, `report.json`, `judged.json`, `resources.json`이 생깁니다. 실행별 로그는 `observations/`에서 볼 수 있습니다. 출력 폴더가 이미 있으면 터미널에 찍힌 새 하위 실행 경로를 여세요.
 
 `result.md` 앞부분에서 발췌했습니다.
 
-@@RESULT@@
+```text
+Tier 1: 0/8 통과 (strict 미확인, relaxed 미확인)
+Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
+자원: Transformer 대비 GPU 시간 —, 최대 VRAM —, 파라미터(블록) ×1.00
+```
 
 ### EvoScientist 연결
 
@@ -123,7 +139,7 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work --prompt exa
 
 ## 데이터
 
-기본 `evo-proxy data --download`가 [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124)에서 단일 파일 약 882 MB를 받습니다. 기존 실측은 88~116초였습니다. 네트워크에 따라 더 오래 걸릴 수 있습니다.
+기본 `evo-proxy data --download`가 [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124)에서 단일 파일 약 882 MB를 받습니다. 이번 CPU 빠른 시작에서 다운로드·검증·준비는 90초였습니다. 네트워크에 따라 더 오래 걸릴 수 있습니다.
 
 수동으로는 Release에서 `proxy-task-bench-data_20261124.tar` 하나를 받고 `evo-proxy data --source proxy-task-bench-data_20261124.tar`를 실행하세요.
 

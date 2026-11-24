@@ -10,7 +10,7 @@ EvoScientist writes a candidate → `evo-proxy check` (contract) → `evo-proxy 
 
 ## Quickstart
 
-Use Linux and Python 3.11. The CPU quickstart used about @@DISK@@ GB of disk. Scored modes require a CUDA GPU. Our validation hardware is a TITAN RTX with 24 GB. This walkthrough runs one CPU smoke task, MAD. First-time installation and slower networks can push it past five minutes.
+Use Linux and Python 3.11. The CPU quickstart used about 5 GB of disk. Scored modes require a CUDA GPU. Our validation hardware is a TITAN RTX with 24 GB. This walkthrough runs one CPU smoke task, MAD. First-time installation and slower networks can push it past five minutes.
 
 Get the code with `git clone`. Skip the Release page’s **Source code (zip/tar.gz)** files. The commands below fetch the data from the Release.
 
@@ -31,13 +31,29 @@ evo-proxy eval examples/candidate_mixer.py --profile smoke --task T1-R1-05 --out
 
 Excerpt from `evo-proxy doctor --core`. The EvoScientist and skill checks may say `false` until you install them.
 
-@@DOCTOR@@
+```json
+{
+  "pinned_harness": true,
+  "formal": true,
+  "retnet": true,
+  "data_18": true,
+  "torch": true,
+  "cuda": "not required (CPU setup)",
+  "nvidia_smi": true,
+  "evoscientist_0_4_1": false,
+  "workspace_skills": true
+}
+```
 
 Evaluation creates `result.md`, `report.json`, `judged.json`, and `resources.json` in `runs/example/`. Task logs are in `observations/`. If the output directory already exists, open the new run directory printed by the command.
 
 Excerpt from `result.md`.
 
-@@RESULT@@
+```text
+Tier 1: 0/8 통과 (strict 미확인, relaxed 미확인)
+Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
+자원: Transformer 대비 GPU 시간 —, 최대 VRAM —, 파라미터(블록) ×1.00
+```
 
 ### Connect EvoScientist
 
@@ -123,7 +139,7 @@ Retention uses the 1× Transformer three-seed mean. The pass threshold is 0.8. S
 
 ## Data
 
-By default `evo-proxy data --download` fetches one file, about 882 MB, from the [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124). Prior measured download and preparation times were 88–116 seconds. Your network may be slower.
+By default `evo-proxy data --download` fetches one file, about 882 MB, from the [Release](https://github.com/awesomesungminyu/kaist_evo_proxy/releases/tag/data-20261124). Download, verification, and preparation took 90 seconds in this CPU quickstart. Your network may be slower.
 
 For manual setup, get `proxy-task-bench-data_20261124.tar` from the Release and run `evo-proxy data --source proxy-task-bench-data_20261124.tar`.
 
