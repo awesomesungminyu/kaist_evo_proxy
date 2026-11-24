@@ -15,6 +15,7 @@ Linux와 Python 3.11이 필요합니다. CPU 빠른 시작은 디스크 약 5 GB
 코드는 `git clone`으로 받으세요. Release 페이지의 **Source code (zip/tar.gz)**는 쓰지 않습니다. 데이터는 아래 명령이 Release에서 자동으로 받습니다.
 
 ```bash
+export PIP_DEFAULT_TIMEOUT=120  # 느린 네트워크에서 설치 끊김 방지
 git clone https://github.com/awesomesungminyu/kaist_evo_proxy.git && cd kaist_evo_proxy  # 코드를 받고 프로젝트 폴더로 이동
 python3.11 -m venv .venv  # Python 가상환경 만들기
 source .venv/bin/activate  # 가상환경 활성화
@@ -163,3 +164,5 @@ Tier 2: 0/10 통과 (strict 미실행, relaxed 미실행)
 [평가 하니스 B](https://github.com/awesomesungminyu/KAIST-Intern-Proxy-Task-Bench)를 직접 복제하거나 읽을 필요는 없습니다. `evo-proxy setup`이 해당 버전을 설치합니다. [후보 구현 예제](examples/candidate_mixer.py)는 `CandidateMixer(d_model, num_heads, l_max)` 계약을 따릅니다.
 
 이 도구를 인용할 때는 **KAIST Evo Proxy**, 저장소 주소와 사용한 커밋, [데이터 출처와 인용](DATA_LICENSES.md)을 적어주세요. 문의는 [GitHub Issues](https://github.com/awesomesungminyu/kaist_evo_proxy/issues)에 남겨주세요.
+
+설치 중 ReadTimeoutError가 나면 같은 명령을 다시 실행하세요. 이미 받은 부분은 건너뜁니다. 호환 버전으로 설치가 끝난 패키지를 건너뛰며, 캐시를 끈 상태에서 중단된 패키지의 다운로드는 다시 시작될 수 있습니다.
