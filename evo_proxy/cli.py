@@ -214,7 +214,11 @@ def main(argv=None):
             if not args.download:
                 if args.tasks != ['all'] or args.dest != Path('incoming'):
                     parser.error('--tasks and --dest require --download')
-                return h.prepare(args.source.resolve())
+                source = args.source.resolve()
+                if source.is_file() and source.suffix == '.tar':
+                    from .drive import prepare_bundle
+                    return prepare_bundle(source)
+                return h.prepare(source)
             from .drive import fetch
             destination = args.dest.resolve()
             return h.prepare(destination, fetch(destination, args.tasks))

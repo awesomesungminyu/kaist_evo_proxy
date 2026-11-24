@@ -63,3 +63,31 @@ def fetch(destination, selectors):
 def verify(path, item):
     if path.stat().st_size != item['size'] or checksum(path) != item['sha256']:
         raise ValueError(f'{item["name"]}: size or SHA-256 mismatch')
+
+
+def prepare_bundle(source):
+    """Stage a local outer TAR and verify every nested archive before preparation."""
+    import shutil
+
+    manifest = harness.read(Path(__file__).with_name('drive_manifest.json'))
+    archives = [item for item in manifest['archives'] if not item['optional']]
+    name_set = {item['name'] for item in archives} | {'README.txt', 'SHA256SUMS_all.txt'}
+    with tempfile.TemporaryDirectory(prefix='evo-proxy-data-') as staging:
+        directory = Path(staging)
+        with tarfile.open(source, 'r:') as bundle:
+            members = bundle.getmembers()
+            if (len(members) != len(name_set) or {member.name for member in members} != name_set
+                    or not all(member.isfile() for member in members)):
+                raise ValueError(f'{source.name}: unexpected bundle members')
+            for item in archives:
+                member = bundle.getmember(item['name'])
+                if member.size != item['size']:
+                    raise ValueError(f'{member.name}: size or SHA-256 mismatch')
+                target = directory / member.name
+                with bundle.extractfile(member) as stream, target.open('wb') as output:
+                    shutil.copyfileobj(stream, output)
+                verify(target, item)
+        for item in archives:
+            with tarfile.open(directory / item['name'], 'r:gz') as archive:
+                archive.extractall(directory, filter='data')
+        return harness.prepare(directory)

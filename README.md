@@ -59,6 +59,7 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
 evo-proxy data --download --tasks tier1 --dest incoming
 evo-proxy data --download --tasks T1-R1-05 T2-R4-02
 evo-proxy data --source incoming
+evo-proxy data --source path/to/proxy-task-bench-data_20261124.tar
 ```
 
 기본 다운로드는 9개 묶음, 881,766,137바이트입니다. 신규 Linux 검증에서 다운로드·검증·압축 해제·준비를 합쳐 58초가 걸렸습니다. Speech의 원본 WAV 묶음은 선택이며, 기본 경로는 평가 캐시를 사용합니다. 이전 extras와 겹치는 자료는 11/23 묶음을 사용합니다.

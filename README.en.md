@@ -59,6 +59,7 @@ python integrations/evoscientist/run_agent.py --workspace .evo-work \
 evo-proxy data --download --tasks tier1 --dest incoming
 evo-proxy data --download --tasks T1-R1-05 T2-R4-02
 evo-proxy data --source incoming
+evo-proxy data --source path/to/proxy-task-bench-data_20261124.tar
 ```
 
 The default archives total 881,766,137 bytes across nine files. The Linux verification took 58 seconds for downloading, checking, extracting, and preparing the data. The original Speech WAV archive is optional. The default path uses the evaluated cache. The November 23 archives take precedence over overlapping October extras.
