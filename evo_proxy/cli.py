@@ -200,7 +200,13 @@ def agent_prompt(profile, task, out):
     run = out.parent
     if not run.is_relative_to('runs') or run == Path('runs'):
         run = Path('runs') / f'{out.name}-inputs'
-    command = shlex.quote(os.getenv('EVO_PROXY_BIN') or 'evo-proxy')
+    executable = os.getenv('EVO_PROXY_BIN') or 'evo-proxy'
+    command = shlex.quote(executable)
+    # EvoSci rewrites a command starting with / as workspace-relative. Its
+    # virtual-root cd keeps the shell in the workspace while preserving the
+    # external executable path in the following command.
+    if Path(executable).is_absolute():
+        command = 'cd / && ' + command
     candidate = run / 'candidate_mixer.py'
     check = f'{command} check {shlex.quote(f"./{candidate}")} --out {shlex.quote(f"./{run}/check")}'
     evaluation = f'{command} eval {shlex.quote(f"./{candidate}")} --profile {profile}'
