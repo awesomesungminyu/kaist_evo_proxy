@@ -1,0 +1,21 @@
+# Dataset sources and licenses
+
+License status refers to the data in the bundle. Where the upstream terms are unclear, the data is provided for research purposes only and will be removed promptly at the rights holder's request. This statement does not grant rights in third-party data. Contact the repository owner through GitHub.
+
+| Dataset | Official source | License text | Redistribution | Paper or citation |
+|---|---|---|---|---|
+| MAD Compression | [MAD Lab](https://github.com/athms/mad-lab) | No separate notice identified for these generated samples | Unclear | [Poli et al. (2024)](https://arxiv.org/abs/2403.17844) |
+| Parity | Benchmark-generated corpus | No separate data notice identified | Unclear | Cite this benchmark and task T1-R0-04 |
+| Tomita 5 | Benchmark-generated grammar corpus | No separate data notice identified | Unclear | Tomita (1982), *Dynamic Construction of Finite-State Automata from Examples Using Hill-Climbing* |
+| Permuted MNIST | [MNIST](https://yann.lecun.com/exdb/mnist/) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/legalcode), as documented in the [MNIST attribution](https://github.com/twosixlabs/armory/blob/master/docs/dataset_licensing.md) | Allowed with attribution and share-alike | [LeCun et al. (1998)](https://doi.org/10.1109/5.726791) |
+| Permuted Kuzushiji-49 | [CODH](https://github.com/rois-codh/kmnist) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) | Allowed with attribution and share-alike | [Clanuwat et al. (2018)](https://arxiv.org/abs/1812.01718) |
+| Speech Commands v0.02 | [Google](https://huggingface.co/datasets/google/speech_commands/blob/main/README.md) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode) | Allowed with attribution | [Warden (2018)](https://arxiv.org/abs/1804.03209) |
+| Permuted EMNIST Letters | [NIST](https://www.nist.gov/itl/products-and-services/emnist-dataset) | Separate redistribution text for this exact transformed version not confirmed | Unclear | [Cohen et al. (2017)](https://arxiv.org/abs/1702.05373) |
+| TAPE Stability | [TAPE](https://github.com/songlab-cal/tape) | Dataset-specific grant for the frozen split not confirmed | Unclear | [Rao et al. (2019)](https://arxiv.org/abs/1906.08230), [Rocklin et al. (2017)](https://doi.org/10.1126/science.aan0693) |
+| enwik8 | [Matt Mahoney](https://www.mattmahoney.net/dc/textdata.html) | Derived from 2006 English Wikipedia. [GFDL](https://www.gnu.org/licenses/fdl-1.2.html) applies to the historical corpus, exact dump notice unconfirmed | Allowed subject to the applicable license terms | Matt Mahoney, *Large Text Compression Benchmark*, enwik8. Credit the English Wikipedia contributors. |
+| IMDb | [Stanford Large Movie Review Dataset](https://nlp.stanford.edu/~amaas/data/sentiment/index.html) | The Stanford distribution page provides citation and download. No explicit redistribution terms found for this edition. | Unclear | [Maas et al. (2011)](https://aclanthology.org/P11-1015/) |
+| Lipophilicity and frozen split | [MoleculeNet / DeepChem](https://deepchem.readthedocs.io/en/stable/api_reference/moleculenet.html) | [ChEMBL CC BY-SA 3.0](https://www.ebi.ac.uk/chembl/) upstream. Exact upstream release and notices for this CSV not confirmed. | Unclear for this edition | [Wu et al. (2018)](https://doi.org/10.1039/C7SC02664A) |
+| Human non-TATA promoters | [Genomic Benchmarks](https://github.com/ML-Bioinfo-CEITEC/genomic_benchmarks) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode) per the existing distribution notice. Exact upstream release notice not independently verified. | Unclear for this edition | [Grešová et al. (2023)](https://doi.org/10.1186/s12864-023-09230-w) |
+| Bach Chorales | [DCMLab](https://github.com/DCMLab/bach_chorales/blob/main/README.md) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/legalcode) | Allowed | DCMLab, *Johann Sebastian Bach – The Chorales*, corpus release. |
+
+Cite the sources in the table together with **KAIST Evo Proxy, Data bundle 2026-11-24, tag `data-20261124`**. The benchmark artifacts include permuted or converted inputs, fixed dataset splits, and resampled and normalized Speech Commands arrays. Each underlying dataset retains its applicable license.
