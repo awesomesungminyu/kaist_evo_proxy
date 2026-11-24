@@ -81,7 +81,9 @@ def setup():
     requirements = [line.strip() for line in (HARNESS/'requirements.txt').read_text().splitlines()
                     if line.strip() and not line.lstrip().startswith('#')]
     for requirement in requirements:
-        options = ['--index-url', 'https://download.pytorch.org/whl/cpu'] if CPU_SETUP and requirement.startswith('torch==') else []
+        options = ['--constraint', str(HARNESS/'requirements.txt')]
+        if CPU_SETUP and requirement.startswith('torch=='):
+            options += ['--index-url', 'https://download.pytorch.org/whl/cpu']
         install_requirement(requirement, timeout, options)
     subprocess.run(['bash', 'setup.sh', 'formal'], cwd=HARNESS, check=True)
     vendor = HARNESS/'third_party/fla_vendor'
