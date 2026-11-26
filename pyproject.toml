@@ -7,7 +7,7 @@ name = "kaist-evo-proxy"
 version = "0.1.0"
 description = "EvoScientist adapter for a frozen candidate mixer evaluation harness"
 requires-python = ">=3.11"
-dependencies = ["gdown==5.2.0"]
+dependencies = ["gdown==5.2.0", "PyYAML==6.0.2"]
 
 [project.scripts]
 evo-proxy = "evo_proxy.cli:main"

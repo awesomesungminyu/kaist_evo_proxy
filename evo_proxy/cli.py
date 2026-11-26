@@ -42,6 +42,10 @@ def doctor(core=False):
     results['pinned_harness'] = h.installed()
     results['formal'] = (h.TFL/'src/args.py').is_file()
     results['retnet'] = (h.HARNESS/'third_party/fla_vendor/fla').is_dir()
+    formal_probe = subprocess.run([sys.executable, '-c',
+        f'import sys; sys.path.insert(0, {str(h.TFL)!r}); import src.main'],
+        env=h.environment('cpu'), capture_output=True, text=True)
+    results['formal_import'] = formal_probe.returncode == 0
     results['data_18'] = len(rows:=h.data_ready())==18 and all(row['ready'] for row in rows)
     probe = subprocess.run([sys.executable,'-c',
         'import json, torch; print(json.dumps({"torch": torch.__version__, "cuda": torch.cuda.is_available()}))'],
@@ -161,6 +165,8 @@ def hardware(profile):
 
 def evaluate(candidate, profile, out, only=None, baseline_run=None, baseline_model=None, *, target=None, progress=None):
     target = h.new_output(out) if target is None else target
+    from .yaml_adapter import materialize
+    candidate = materialize(candidate, target)
     baseline_path, _ = load_baseline(target.resolve(), {'profile': profile}, baseline_run)
     ok,check,extra = checked(candidate,target,'eval')
     config=h.read(h.ROOT/'tasks/tasks.json')
@@ -316,7 +322,9 @@ def main(argv=None):
             return download_and_prepare(args.dest.resolve(), args.tasks)
         if args.command=='check':
             target=h.new_output(args.out)
-            ok,check,extra=checked(args.mixer.resolve(),target,'check',args.gpu_benchmark)
+            from .yaml_adapter import materialize
+            candidate = materialize(args.mixer.resolve(), target)
+            ok,check,extra=checked(candidate,target,'check',args.gpu_benchmark)
             print(f'Precheck: {"passed" if ok else "failed"}')
             print(format_precheck(check,extra))
             print('Dataset-dependent checks: data preparation required / 데이터 준비 후 확인')
