@@ -85,6 +85,9 @@ def setup():
         if CPU_SETUP and requirement.startswith('torch=='):
             options += ['--index-url', 'https://download.pytorch.org/whl/cpu']
         install_requirement(requirement, timeout, options)
+    # TFL's Parity/Tomita loaders import these even for a one-step smoke.
+    for requirement in ('gensim==4.3.3', 'attrdict3==2.0.2', 'matplotlib==3.9.4', 'seaborn==0.13.2'):
+        install_requirement(requirement, timeout, ['--constraint', str(HARNESS/'requirements.txt')])
     subprocess.run(['bash', 'setup.sh', 'formal'], cwd=HARNESS, check=True)
     vendor = HARNESS/'third_party/fla_vendor'
     for requirement in ('flash-linear-attention==0.3.1', 'einops==0.8.1'):
